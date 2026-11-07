@@ -5,6 +5,10 @@ import java.awt.event.*;
 import java.net.URL;
 import javax.swing.*;
 
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.Clip;
+
 public class PantallaLogin extends JFrame {
 
     private final Color VERDE = new Color(75, 145, 85);
@@ -15,6 +19,11 @@ public class PantallaLogin extends JFrame {
     private final JPasswordField txtPass = new JPasswordField();
     private final JLabel lblEstado = new JLabel(" ");
     private JButton btnIngresar, btnRegistrar;
+
+    // ===== [CAMBIO SONIDO] =====
+    // Música ambiental (la misma que usa Pantallainicio)
+    private Clip musica;
+    // ===== FIN CAMBIO =====
 
     public PantallaLogin() {
         setTitle("EL ÚLTIMO REFUGIO - Acceso");
@@ -98,8 +107,23 @@ public class PantallaLogin extends JFrame {
 
         fondo.add(caja, new GridBagConstraints());
         setContentPane(fondo);
+
+        // ===== [CAMBIO SONIDO] =====
+        // Detener la música si se cierra la ventana con la X
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                detenerMusica();
+            }
+        });
+        // ===== FIN CAMBIO =====
+
         setVisible(true);
         txtUsuario.requestFocusInWindow();
+
+        // ===== [CAMBIO SONIDO] =====
+        reproducirMusica();
+        // ===== FIN CAMBIO =====
     }
 
     // ---------- Lógica ----------
@@ -124,8 +148,18 @@ public class PantallaLogin extends JFrame {
             protected void done() {
                 try {
                     get();
-                    dispose();
+
+                    // ===== [CAMBIO TRANSICIÓN] =====
+                    // 1) Primero se abre el menú: el login sigue visible debajo,
+                    //    así nunca se ve el escritorio.
                     new Pantallainicio();
+
+                    // 2) Recién cuando el menú ya está en pantalla, se corta
+                    //    la música del login y se cierra esta ventana.
+                    detenerMusica();
+                    dispose();
+                    // ===== FIN CAMBIO =====
+
                 } catch (Exception ex) {
                     Throwable causa = ex.getCause() != null ? ex.getCause() : ex;
                     mostrar(causa.getMessage(), new Color(230, 120, 110));
@@ -144,6 +178,54 @@ public class PantallaLogin extends JFrame {
         lblEstado.setForeground(c);
         lblEstado.setText(msg);
     }
+
+    // ===== [CAMBIO SONIDO] =====
+    // REPRODUCIR AUDIO WAV EN BUCLE
+
+    private void reproducirMusica() {
+
+        try {
+
+            URL sonido = getClass().getResource("/audio/Sonidoambiental.wav");
+
+            if (sonido != null) {
+
+                AudioInputStream audio = AudioSystem.getAudioInputStream(sonido);
+
+                musica = AudioSystem.getClip();
+
+                musica.open(audio);
+
+                // Reproducir infinitamente
+                musica.loop(Clip.LOOP_CONTINUOUSLY);
+
+            } else {
+
+                System.out.println("No se encontró Sonidoambiental.wav");
+
+            }
+
+        } catch (Exception e) {
+
+            System.out.println("Error al reproducir música: " + e.getMessage());
+
+        }
+    }
+
+    // DETENER AUDIO
+
+    private void detenerMusica() {
+
+        if (musica != null) {
+
+            musica.stop();
+
+            musica.close();
+
+            musica = null;
+        }
+    }
+    // ===== FIN CAMBIO =====
 
     // ---------- Estilos ----------
 
