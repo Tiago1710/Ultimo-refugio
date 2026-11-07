@@ -407,7 +407,8 @@ public class Juego {
                     break;
 
                 default:
-                    decision = new Decision(102, "Misión Científica: Sintetizar un suero purificador avanzado utilizando el entorno.", "Trabajar toda la noche en el laboratorio (-1 Provisión, +3 Medicinas)", "Hacer una versión rápida (+1 Medicina)", "Abandonar la investigación");
+                    // DESCANSAR, USAR_MEDICINA, FORTIFICAR y CASA: eventos propios para cada acción
+                    decision = eventoMedicoGeneral(accion, subEvento % 5);
                     break;
             }
 
@@ -561,9 +562,89 @@ public class Juego {
                     break;
 
                 default:
-                    decision = new Decision(200, "Misión Táctica: Un viejo mapa militar señala un depósito de armas abandonado.", "Organizar expedición táctica arriesgada (+3 Munición, -1 Provisión)", "Explorar solo alrededores seguros", "Descartar mapa");
+                    // DESCANSAR, USAR_MEDICINA, FORTIFICAR y CASA: eventos propios para cada acción
+                    decision = eventoSobrevivienteGeneral(accion, subEvento % 5);
                     break;
             }
+        }
+    }
+
+    // =========================================================================
+    // EVENTOS PARA DESCANSAR, USAR MEDICINA, FORTIFICAR Y CASA (5 por acción y rol)
+    // Antes estas acciones no tenían casos y siempre caían en el mismo evento.
+    // =========================================================================
+
+    private Decision eventoMedicoGeneral(Accion accion, int n) {
+        switch (accion) {
+            case DESCANSAR:
+                switch (n) {
+                    case 0:  return new Decision(500, "Mientras descansas oyes toses y pasos afuera: un herido pide ayuda a la puerta.", "Atenderlo con lo que tengas a mano (-1 Medicina, +20 Puntos)", "Pasarle una venda por la rendija (+5 Puntos)", "Ignorar los pedidos");
+                    case 1:  return new Decision(501, "Un sueño inquieto te hace recordar la fórmula de un viejo antiséptico.", "Anotarla y prepararla con lo que hay (+1 Medicina)", "Seguir durmiendo (+5 Salud)", "Olvidar el asunto");
+                    case 2:  return new Decision(502, "Al revisar tu botiquín durante el descanso notas frascos mal rotulados.", "Reetiquetar y reorganizar el instrumental (+10 Puntos)", "Mezclar sobrantes en una solución nueva (-5 Salud, +1 Medicina)", "Dejarlo como está");
+                    case 3:  return new Decision(503, "Una gotera cae sobre tus apuntes médicos mientras descansas.", "Salvar los apuntes y estudiarlos (+15 Puntos)", "Mover tu catre y seguir durmiendo (+5 Salud)", "Ignorar la gotera");
+                    default: return new Decision(504, "Un gato callejero entra al refugio con una herida infectada.", "Curarlo con tus conocimientos (-1 Medicina, +15 Puntos)", "Compartir tu ración con él (-1 Provisión, +10 Salud)", "Echarlo con cuidado");
+                }
+            case USAR_MEDICINA:
+                switch (n) {
+                    case 0:  return new Decision(510, "Al preparar la dosis notas que podrías estirar la medicina con agua destilada.", "Diluir con cuidado y fraccionar (+1 Medicina, -5 Salud)", "Usar la dosis completa (+10 Salud)", "Guardar el frasco");
+                    case 1:  return new Decision(511, "Durante la cura se te ocurre un método mejor para esterilizar las agujas.", "Probar el método nuevo (+15 Puntos)", "Hervir todo como siempre (+5 Salud)", "Dejarlo para otro día");
+                    case 2:  return new Decision(512, "Desde la calle, un vecino dice estar enfermo y llama a gritos.", "Ir a revisarlo con tu maletín (-1 Medicina, +25 Puntos)", "Hablarle desde lejos dándole consejos (+10 Puntos)", "No responder");
+                    case 3:  return new Decision(102, "Misión Científica: Sintetizar un suero purificador avanzado utilizando el entorno.", "Trabajar toda la noche en el laboratorio (-1 Provisión, +3 Medicinas)", "Hacer una versión rápida (+1 Medicina)", "Abandonar la investigación");
+                    default: return new Decision(513, "Encuentras notas tuyas de un caso parecido al tuyo en el fondo del maletín.", "Aplicar el tratamiento anotado (+10 Salud, +10 Puntos)", "Archivar las notas (+5 Puntos)", "Guardar el maletín");
+                }
+            case FORTIFICAR:
+                switch (n) {
+                    case 0:  return new Decision(520, "Al clavar tablones descubres un doble fondo en la pared con instrumental médico.", "Abrirlo con cuidado (+1 Medicina)", "Sellarlo de nuevo (+1 Defensa)", "Ignorarlo");
+                    case 1:  return new Decision(521, "Improvisas una esclusa de bioseguridad con plásticos en la entrada.", "Terminar la esclusa (+1 Defensa, +10 Puntos)", "Usar el plástico para hacer vendas (+1 Medicina)", "Dejar el plástico");
+                    case 2:  return new Decision(522, "Tu martillo golpea tu dedo y el tablón se parte en dos.", "Seguir trabajando con la mano herida (-5 Salud, +1 Defensa)", "Vendarte la mano y descansar un rato (+5 Salud)", "Hacer una pausa");
+                    case 3:  return new Decision(523, "Un vecino ofrece clavos y alambre a cambio de una consulta médica.", "Hacerle la consulta (+1 Defensa, +10 Puntos)", "Pedirle comida en lugar de clavos (+1 Provisión)", "Rechazar su trato");
+                    default: return new Decision(524, "Una tabla del piso suelta esconde una cajita metálica.", "Abrirla (+1 Medicina, +5 Puntos)", "Usar la tabla para reforzar la puerta (+1 Defensa)", "Dejarla");
+                }
+            default: // CASA
+                switch (n) {
+                    case 0:  return new Decision(530, "En un consultorio doméstico abandonado quedan cajones con muestras médicas.", "Revisar los cajones (+1 Medicina)", "Llevar los libros de consulta (+10 Puntos)", "Salir");
+                    case 1:  return new Decision(531, "Un anciano enfermo vive escondido en el dormitorio de la casa.", "Tratarlo (-1 Medicina, +2 Provisiones, +15 Puntos)", "Dejarle una nota con consejos (+5 Puntos)", "Retirarte");
+                    case 2:  return new Decision(532, "La cocina huele a lejía y conservas: alguien las almacenó con método.", "Llevar las conservas (+2 Provisiones)", "Quedarte la lejía para desinfectar (+1 Medicina)", "Cerrar la puerta");
+                    case 3:  return new Decision(533, "En el baño hay un botiquín colgado, pero el espejo está roto y hay vidrios por todos lados.", "Recoger con cuidado (+1 Medicina)", "Apurarte a tomarlo todo (-5 Salud, +2 Medicinas)", "Pasar de largo");
+                    default: return new Decision(534, "El diario de una enfermera describe un escondite de suministros en el ático.", "Subir al ático (+1 Medicina, +1 Provisión)", "Copiar el diario (+10 Puntos)", "Dejar el diario");
+                }
+        }
+    }
+
+    private Decision eventoSobrevivienteGeneral(Accion accion, int n) {
+        switch (accion) {
+            case DESCANSAR:
+                switch (n) {
+                    case 0:  return new Decision(600, "Un ruido en la puerta interrumpe tu descanso: algo rasca la madera.", "Salir a enfrentarlo (-1 Munición, +15 Puntos)", "Esperar en silencio", "Barricar la puerta (+1 Defensa)");
+                    case 1:  return new Decision(601, "Mientras dormitas oyes los pasos de una patrulla que pasa cerca.", "Quedarte quieto y dejar que pasen (+5 Salud)", "Espiar por la rendija (+10 Puntos)", "Salir a seguirlos");
+                    case 2:  return new Decision(602, "Un sueño agitado te hace recordar un escondite de víveres cerca de aquí.", "Ir a buscarlo (+2 Provisiones)", "Seguir descansando (+10 Salud)", "Olvidarlo");
+                    case 3:  return new Decision(603, "Un perro flaco merodea el refugio buscando comida.", "Darle un poco de comida (-1 Provisión, +10 Puntos)", "Espantarlo", "Ignorarlo");
+                    default: return new Decision(604, "Te despiertas con calambres en las piernas.", "Estirar y hacer ejercicio suave (+5 Salud)", "Masajearte y dormir otro rato (+5 Salud, +5 Puntos)", "Seguir durmiendo");
+                }
+            case USAR_MEDICINA:
+                switch (n) {
+                    case 0:  return new Decision(610, "Mientras te curas escuchas disparos lejanos.", "Terminar rápido y salir a mirar (+10 Puntos)", "Apagar la luz y esperar", "Seguir con la cura (+5 Salud)");
+                    case 1:  return new Decision(611, "Tu venda está sucia y necesitas improvisar una nueva.", "Cortar tela de una manta (+5 Salud)", "Usar una tira de tu camisa", "Reusar la vieja");
+                    case 2:  return new Decision(612, "Un viajero herido golpea tu puerta pidiendo medicina.", "Darle una medicina (-1 Medicina, +25 Puntos)", "Venderle información por comida (+1 Provisión)", "No abrirle");
+                    case 3:  return new Decision(200, "Misión Táctica: Un viejo mapa militar señala un depósito de armas abandonado.", "Organizar expedición táctica arriesgada (+3 Munición, -1 Provisión)", "Explorar solo alrededores seguros", "Descartar mapa");
+                    default: return new Decision(613, "El olor a antiséptico atrae a un infectado hasta tu refugio.", "Enfrentarlo con tu arma (-1 Munición, +15 Puntos)", "Esperar a que se vaya", "Atraerlo lejos con ruido");
+                }
+            case FORTIFICAR:
+                switch (n) {
+                    case 0:  return new Decision(620, "Tus golpes de martillo se oyen demasiado lejos.", "Seguir de todos modos (+1 Defensa)", "Envolver el martillo en trapos (+1 Defensa, +5 Puntos)", "Parar y esperar");
+                    case 1:  return new Decision(621, "Encuentras clavos oxidados y chapas en un rincón del refugio.", "Usarlos para reforzar la entrada (+1 Defensa)", "Armar una alarma de latas (+10 Puntos)", "Guardarlos");
+                    case 2:  return new Decision(622, "Una tabla del piso se rompe y revela una caja de cartuchos.", "Abrir la caja (+2 Munición)", "Usar la tabla para reforzar la puerta (+1 Defensa)", "Dejarla");
+                    case 3:  return new Decision(623, "Una pared se agrieta mientras la refuerzas.", "Apuntalarla con vigas (-5 Salud, +1 Defensa)", "Taparla con muebles", "Ignorar la grieta");
+                    default: return new Decision(624, "Un vecino que ronda por la zona ofrece ayuda a cambio de comida.", "Aceptar y compartir una ración (-1 Provisión, +1 Defensa)", "Rechazar con firmeza", "Espantarlo");
+                }
+            default: // CASA
+                switch (n) {
+                    case 0:  return new Decision(630, "Una casa tiene la puerta trabada desde dentro y se oyen gemidos.", "Forzar la puerta y pelear (-1 Munición, +2 Provisiones)", "Entrar por la ventana trasera (+1 Provisión)", "Alejarte");
+                    case 1:  return new Decision(631, "Encuentras una caja fuerte pequeña detrás de un cuadro.", "Forzarla con una palanca (+2 Munición)", "Intentar adivinar la clave (+10 Puntos)", "Dejarla");
+                    case 2:  return new Decision(632, "El garaje de la casa guarda herramientas y una escopeta sin cartuchos.", "Llevar las herramientas (+1 Defensa)", "Llevar la escopeta para trueque (+1 Provisión)", "Ignorar el garaje");
+                    case 3:  return new Decision(633, "En la cocina, una alacena oculta latas de conserva.", "Vaciarla (+2 Provisiones)", "Llevar solo lo imprescindible (+1 Provisión)", "Cerrar la alacena");
+                    default: return new Decision(634, "Un cuarto infantil tiene mochilas con linternas y chocolates.", "Revisar las mochilas (+1 Provisión, +5 Salud)", "Llevar las linternas (+10 Puntos)", "Salir sin tocar nada");
+                }
         }
     }
 
