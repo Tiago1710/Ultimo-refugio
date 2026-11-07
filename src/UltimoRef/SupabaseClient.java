@@ -20,6 +20,10 @@ public class SupabaseClient {
 
     private static final String DOMINIO = "@elultimorefugio.com";
 
+    /** Criterios de orden del ranking. */
+    public static final String ORDEN_PUNTAJE = "puntuacion";
+    public static final String ORDEN_DIAS = "dias";
+
     private static class Resp {
         int codigo;
         String cuerpo;
@@ -202,38 +206,46 @@ public class SupabaseClient {
     }
 
     // =====================================================================
-    // UTILIDADES
-    // =====================================================================
-
-    // =====================================================================
-    // ===== [NUEVO] RANKING =====
+    // ===== RANKING (por puntaje y por días) =====
     // =====================================================================
 
     /**
-     * Registra el puntaje de una partida terminada.
-     * Solo se guarda si supera la mejor puntuación anterior del jugador
-     * (una fila por jugador en el ranking).
+     * Registra el resultado de una partida terminada.
+     * Hay una fila por jugador, y en ella se guardan DOS récords independientes:
+     * la mejor puntuación y la mayor cantidad de días. Así, cada ranking
+     * refleja el verdadero mejor resultado del jugador en ese criterio,
+     * aunque vengan de partidas distintas.
      */
     public static void guardarRanking(Juego j) throws IOException {
         if (!haySesion()) return;
 
-        // 1. Consultar el mejor puntaje actual de este jugador
+        int mejorPuntaje = j.getPuntuacion();
+        int mejorDias = j.getDias();
+        boolean mejoro = true; // si no hay fila previa, se inserta
+
+        // 1. Consultar los récords actuales de este jugador
         Resp actual = authed("GET",
-                "/rest/v1/ranking?user_id=eq." + userId + "&select=puntuacion", null, null);
+                "/rest/v1/ranking?user_id=eq." + userId + "&select=puntuacion,dias", null, null);
         if (actual.codigo < 400) {
-            String previo = extraer(actual.cuerpo, "\"puntuacion\"\\s*:\\s*(-?\\d+)");
-            if (previo != null && Integer.parseInt(previo) >= j.getPuntuacion()) {
-                return; // no superó su récord
+            String prevPuntaje = extraer(actual.cuerpo, "\"puntuacion\"\\s*:\\s*(-?\\d+)");
+            String prevDias = extraer(actual.cuerpo, "\"dias\"\\s*:\\s*(-?\\d+)");
+            if (prevPuntaje != null && prevDias != null) {
+                int pp = Integer.parseInt(prevPuntaje);
+                int pd = Integer.parseInt(prevDias);
+                mejoro = j.getPuntuacion() > pp || j.getDias() > pd;
+                if (!mejoro) return; // no superó ningún récord
+                mejorPuntaje = Math.max(pp, j.getPuntuacion());
+                mejorDias = Math.max(pd, j.getDias());
             }
         }
 
-        // 2. Insertar o actualizar su fila
+        // 2. Insertar o actualizar su fila con los máximos de cada criterio
         String json = "{"
                 + "\"user_id\":\"" + userId + "\","
                 + "\"username\":\"" + esc(username) + "\","
                 + "\"rol\":\"" + esc(j.getRol()) + "\","
-                + "\"puntuacion\":" + j.getPuntuacion() + ","
-                + "\"dias\":" + j.getDias() + ","
+                + "\"puntuacion\":" + mejorPuntaje + ","
+                + "\"dias\":" + mejorDias + ","
                 + "\"updated_at\":\"" + java.time.Instant.now() + "\""
                 + "}";
 
@@ -242,13 +254,19 @@ public class SupabaseClient {
     }
 
     /**
-     * Devuelve los 10 mejores. Cada elemento: {usuario, rol, dias, puntuacion}.
-     * Orden: más puntos primero; en empate, más días primero.
+     * Devuelve los 10 mejores según el criterio pedido
+     * (ORDEN_PUNTAJE u ORDEN_DIAS). Cada elemento: {usuario, rol, dias, puntuacion}.
+     * Por puntaje: más puntos primero, en empate más días.
+     * Por días: más días primero, en empate más puntos.
      */
-    public static List<String[]> obtenerTop10() throws IOException {
+    public static List<String[]> obtenerTop10(String orden) throws IOException {
+        String order = ORDEN_DIAS.equals(orden)
+                ? "dias.desc,puntuacion.desc"
+                : "puntuacion.desc,dias.desc";
+
         Resp r = authed("GET",
                 "/rest/v1/ranking?select=username,rol,dias,puntuacion"
-                + "&order=puntuacion.desc,dias.desc&limit=10", null, null);
+                + "&order=" + order + "&limit=10", null, null);
         if (r.codigo >= 400) throw new IOException("No se pudo cargar el ranking: " + r.cuerpo);
 
         List<String[]> top = new ArrayList<>();
@@ -266,7 +284,16 @@ public class SupabaseClient {
         }
         return top;
     }
+
+    /** Compatibilidad: top 10 por puntaje (como antes). */
+    public static List<String[]> obtenerTop10() throws IOException {
+        return obtenerTop10(ORDEN_PUNTAJE);
+    }
     // ===== FIN RANKING =====
+
+    // =====================================================================
+    // UTILIDADES
+    // =====================================================================
 
     private static int num(String json, String campo) {
         String v = extraer(json, "\"" + campo + "\"\\s*:\\s*(-?\\d+)");
