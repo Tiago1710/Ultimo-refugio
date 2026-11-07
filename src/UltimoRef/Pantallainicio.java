@@ -1,0 +1,587 @@
+package UltimoRef;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.net.URL;
+import javax.swing.*;
+
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.Clip;
+
+public class Pantallainicio extends JFrame {
+
+    
+    // COLORES
+    
+    private final Color VERDE = new Color(75, 145, 85);
+    private final Color TEXTO = new Color(225, 235, 215);
+    private final Color FONDO_BOTON = new Color(15, 25, 17);
+
+    
+    // VARIABLE DE MUSICA
+    
+
+    private Clip musica;
+
+    
+    // CONSTRUCTOR
+    
+
+    public Pantallainicio() {
+
+        setTitle("EL ÚLTIMO REFUGIO");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        
+        // FONDO DEL MENU
+        
+
+        JPanel fondo = new JPanel() {
+
+            private Image imagen;
+
+            {
+                URL url = getClass().getResource(
+                    "/UltimoRef/img/MenuPrincipal.png"
+                );
+
+                if (url != null) {
+                    imagen = new ImageIcon(url).getImage();
+                }
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+
+                super.paintComponent(g);
+
+                if (imagen != null) {
+
+                    g.drawImage(
+                        imagen, 0, 0,
+                        getWidth(), getHeight(), this
+                    );
+
+                } else {
+
+                    g.setColor(new Color(15, 25, 17));
+                    g.fillRect(0, 0, getWidth(), getHeight());
+
+                }
+
+                // Oscurecer fondo
+                Graphics2D g2 = (Graphics2D) g.create();
+
+                g2.setColor(new Color(0, 0, 0, 155));
+
+                g2.fillRect(
+                    0, 0, getWidth(), getHeight()
+                );
+
+                // Degradado
+                GradientPaint degradado = new GradientPaint(
+                    0, 0,
+                    new Color(0, 0, 0, 180),
+                    getWidth(), 0,
+                    new Color(0, 0, 0, 50)
+                );
+
+                g2.setPaint(degradado);
+
+                g2.fillRect(
+                    0, 0, getWidth(), getHeight()
+                );
+
+                g2.dispose();
+            }
+        };
+
+        fondo.setLayout(new GridBagLayout());
+
+        
+        // PANEL PRINCIPAL
+        
+
+        JPanel menu = new JPanel();
+
+        menu.setLayout(
+            new BoxLayout(menu, BoxLayout.Y_AXIS)
+        );
+
+        menu.setOpaque(false);
+
+        
+        // TITULO
+       
+
+        TituloAnimado titulo = new TituloAnimado(
+            "EL ÚLTIMO REFUGIO"
+        );
+
+        titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        titulo.setForeground(TEXTO);
+
+        titulo.setFont(
+            new Font("Serif", Font.BOLD, 55)
+        );
+
+        
+        // SUBTITULO
+       
+
+        JLabel subtitulo = new JLabel(
+            "LA CIVILIZACIÓN CAYÓ. SOBREVIVIR ES TU ÚNICA OPCIÓN."
+        );
+
+        subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        subtitulo.setForeground(
+            new Color(190, 210, 185)
+        );
+
+        subtitulo.setFont(
+            new Font("SansSerif", Font.BOLD, 14)
+        );
+
+        
+        // LINEA DECORATIVA
+        
+
+        JPanel linea = new JPanel();
+
+        linea.setMaximumSize(
+            new Dimension(400, 2)
+        );
+
+        linea.setBackground(VERDE);
+
+        linea.setAlignmentX(
+            Component.CENTER_ALIGNMENT
+        );
+
+        
+        // BOTON JUGAR
+        
+
+        JButton btnJugar = crearBoton("JUGAR");
+
+        btnJugar.addActionListener(e -> iniciarJuego());
+
+        
+        // BOTON CONTINUAR
+        
+
+        JButton btnContinuar = crearBoton("CONTINUAR");
+
+        btnContinuar.setEnabled(false);
+
+        btnContinuar.setToolTipText(
+            "Todavía no hay partidas guardadas"
+        );
+
+        
+        // BOTON COMO JUGAR
+        
+
+        JButton btnComoJugar = crearBoton("CÓMO JUGAR");
+
+        btnComoJugar.addActionListener(
+            e -> mostrarInstrucciones()
+        );
+
+        
+        // BOTON SALIR
+        
+
+        JButton btnSalir = crearBoton("SALIR");
+
+        btnSalir.addActionListener(e -> {
+
+            int respuesta = JOptionPane.showConfirmDialog(
+                this,
+                "¿Estás seguro de que querés abandonar el juego?",
+                "SALIR DEL JUEGO",
+                JOptionPane.YES_NO_OPTION
+            );
+
+            if (respuesta == JOptionPane.YES_OPTION) {
+
+                detenerMusica();
+
+                dispose();
+
+                System.exit(0);
+            }
+        });
+
+        
+        // AGREGAR COMPONENTES
+        
+
+        menu.add(titulo);
+
+        menu.add(Box.createVerticalStrut(12));
+
+        menu.add(subtitulo);
+
+        menu.add(Box.createVerticalStrut(20));
+
+        menu.add(linea);
+
+        menu.add(Box.createVerticalStrut(45));
+
+        menu.add(btnJugar);
+
+        menu.add(Box.createVerticalStrut(12));
+
+        menu.add(btnContinuar);
+
+        menu.add(Box.createVerticalStrut(12));
+
+        menu.add(btnComoJugar);
+
+        menu.add(Box.createVerticalStrut(12));
+
+        menu.add(btnSalir);
+
+        menu.add(Box.createVerticalStrut(40));
+
+        
+        // FRASE INFERIOR
+        
+
+        JLabel frase = new JLabel(
+            "\"Cada día es una nueva oportunidad para sobrevivir.\""
+        );
+
+        frase.setForeground(
+            new Color(190, 205, 185)
+        );
+
+        frase.setFont(
+            new Font("Serif", Font.ITALIC, 16)
+        );
+
+        frase.setAlignmentX(
+            Component.CENTER_ALIGNMENT
+        );
+
+        menu.add(frase);
+
+        
+        // UBICAR MENU
+        
+
+        GridBagConstraints gbc = new GridBagConstraints();
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+
+        gbc.anchor = GridBagConstraints.CENTER;
+
+        fondo.add(menu, gbc);
+
+        setContentPane(fondo);
+
+       
+        // CERRAR VENTANA
+       
+
+        addWindowListener(new WindowAdapter() {
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+
+                detenerMusica();
+
+            }
+        });
+
+        setVisible(true);
+
+        
+        // ANIMACION Y MUSICA
+       
+
+        titulo.iniciarAnimacion();
+
+        reproducirMusica();
+    }
+
+    
+    // TITULO ANIMADO
+   
+
+    private class TituloAnimado extends JLabel {
+
+        private float opacidad = 0f;
+
+        public TituloAnimado(String texto) {
+
+            super(texto);
+        }
+
+        public void iniciarAnimacion() {
+
+            Timer temporizador = new Timer(40, e -> {
+
+                opacidad += 0.025f;
+
+                if (opacidad >= 1f) {
+
+                    opacidad = 1f;
+
+                    ((Timer) e.getSource()).stop();
+                }
+
+                repaint();
+            });
+
+            temporizador.start();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+
+            Graphics2D g2 = (Graphics2D) g.create();
+
+            g2.setComposite(
+                AlphaComposite.getInstance(
+                    AlphaComposite.SRC_OVER,
+                    opacidad
+                )
+            );
+
+            super.paintComponent(g2);
+
+            g2.dispose();
+        }
+    }
+
+   
+    // CREAR BOTONES
+    
+
+    private JButton crearBoton(String texto) {
+
+        JButton boton = new JButton(texto);
+
+        boton.setAlignmentX(
+            Component.CENTER_ALIGNMENT
+        );
+
+        boton.setPreferredSize(
+            new Dimension(310, 48)
+        );
+
+        boton.setMaximumSize(
+            new Dimension(310, 48)
+        );
+
+        boton.setMinimumSize(
+            new Dimension(310, 48)
+        );
+
+        boton.setFont(
+            new Font("SansSerif", Font.BOLD, 15)
+        );
+
+        boton.setForeground(TEXTO);
+
+        boton.setBackground(FONDO_BOTON);
+
+        boton.setFocusPainted(false);
+
+        boton.setCursor(
+            new Cursor(Cursor.HAND_CURSOR)
+        );
+
+        boton.setBorder(
+            BorderFactory.createCompoundBorder(
+
+                BorderFactory.createLineBorder(
+                    new Color(80, 130, 80), 2
+                ),
+
+                BorderFactory.createEmptyBorder(
+                    10, 20, 10, 20
+                )
+            )
+        );
+
+        boton.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+                if (boton.isEnabled()) {
+
+                    boton.setBackground(
+                        new Color(55, 100, 60)
+                    );
+
+                    boton.setForeground(Color.WHITE);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+                boton.setBackground(FONDO_BOTON);
+
+                boton.setForeground(TEXTO);
+            }
+        });
+
+        return boton;
+    }
+
+    
+    // INICIAR PARTIDA (MODIFICADO)
+    
+
+    private void iniciarJuego() {
+        // 1. Ocultar la pantalla actual inmediatamente para dar respuesta visual rápida
+        setVisible(false);
+
+        // 2. Detener la música en un hilo separado para que no bloquee el hilo principal (EDT)
+        new Thread(() -> {
+            detenerMusica();
+        }).start();
+
+        // 3. Cargar la siguiente ventana y luego liberar esta
+        SwingUtilities.invokeLater(() -> {
+            new UltimoRef.Ventanajuego();
+            dispose();
+        });
+    }
+
+    
+    // INSTRUCCIONES
+    
+
+    private void mostrarInstrucciones() {
+
+        String instrucciones =
+
+            "BIENVENIDO A EL ÚLTIMO REFUGIO\n\n" +
+
+            "El mundo ha sido devastado por una infección.\n" +
+            "Tu objetivo es sobrevivir la mayor cantidad de días posible.\n\n" +
+
+            "¿CÓMO JUGAR?\n\n" +
+
+            "1. Elegí tu personaje: Médico o Sobreviviente.\n\n" +
+
+            "2. Cada día deberás realizar una acción.\n\n" +
+
+            "3. Explorá diferentes lugares para conseguir recursos:\n" +
+            "   Hospital, bosque, mercado, granja y comisaría.\n\n" +
+
+            "4. Administrá tus recursos:\n" +
+            "   Salud, medicinas, provisiones, munición y defensa.\n\n" +
+
+            "5. Cada día consumís una provisión.\n\n" +
+
+            "6. Tomá decisiones cuidadosamente.\n\n" +
+
+            "OBJETIVO: SOBREVIVIR TODO LO QUE PUEDAS.";
+
+        JTextArea area = new JTextArea(instrucciones);
+
+        area.setEditable(false);
+
+        area.setLineWrap(true);
+
+        area.setWrapStyleWord(true);
+
+        area.setBackground(
+            new Color(18, 27, 19)
+        );
+
+        area.setForeground(TEXTO);
+
+        area.setFont(
+            new Font("Monospaced", Font.PLAIN, 13)
+        );
+
+        area.setBorder(
+            BorderFactory.createEmptyBorder(
+                15, 15, 15, 15
+            )
+        );
+
+        JScrollPane scroll = new JScrollPane(area);
+
+        scroll.setPreferredSize(
+            new Dimension(530, 450)
+        );
+
+        JOptionPane.showMessageDialog(
+            this,
+            scroll,
+            "MANUAL DE SUPERVIVENCIA",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+    
+    // REPRODUCIR AUDIO WAV EN BUCLE
+    
+
+    private void reproducirMusica() {
+
+        try {
+
+            URL sonido = getClass().getResource(
+                "/audio/Sonidoambiental.wav"
+            );
+
+            if (sonido != null) {
+
+                AudioInputStream audio =
+                    AudioSystem.getAudioInputStream(sonido);
+
+                musica = AudioSystem.getClip();
+
+                musica.open(audio);
+
+                // Reproducir infinitamente
+                musica.loop(Clip.LOOP_CONTINUOUSLY);
+
+            } else {
+
+                System.out.println(
+                    "No se encontró Sonidoambiental.wav"
+                );
+
+            }
+
+        } catch (Exception e) {
+
+            System.out.println(
+                "Error al reproducir música: " + e.getMessage()
+            );
+
+        }
+    }
+
+    
+    // DETENER AUDIO
+    
+
+    private void detenerMusica() {
+
+        if (musica != null) {
+
+            musica.stop();
+
+            musica.close();
+
+            musica = null;
+        }
+    }
+}

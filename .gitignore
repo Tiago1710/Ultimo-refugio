@@ -1,0 +1,17 @@
+# Archivos generados
+/build/
+/dist/
+
+# Archivos temporales de Java
+*.class
+
+# Configuración privada de NetBeans
+/nbproject/private/
+
+# Audios pesados
+/src/audio/Sonidoambiental.wav
+/src/audio/Sonidojuego.wav
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
