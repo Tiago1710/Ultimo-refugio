@@ -5,10 +5,14 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.net.URL;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -19,7 +23,6 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.SwingUtilities;
 
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -46,6 +49,13 @@ public class Ventanajuego extends JFrame {
     // SONIDO AMBIENTAL DEL JUEGO
 
     private Clip sonidoFondo;
+
+    // IMÁGENES PRECARGADAS (se escalan una sola vez al crear la ventana)
+
+    private ImageIcon iconoMedicoTarjeta;
+    private ImageIcon iconoSobrevivienteTarjeta;
+    private ImageIcon iconoMedicoLateral;
+    private ImageIcon iconoSobrevivienteLateral;
 
     // Componentes visuales principales del HUD
     private final Panelfondo fondo = new Panelfondo();
@@ -83,11 +93,17 @@ public class Ventanajuego extends JFrame {
     };
 
     // CONSTRUCTOR DE LA VENTANA PRINCIPAL
+    // Construye toda la interfaz SIN mostrarla. La ventana se muestra
+    // desde iniciarDesde(...), cuando ya está todo listo.
 
     public Ventanajuego() {
         setTitle("ÚLTIMO REFUGIO - SUPERVIVENCIA");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
+        getContentPane().setBackground(COLOR_FONDO_GENERAL);
+
+        // Se cargan y escalan las imágenes pesadas una sola vez.
+        precargarImagenes();
 
         // PANEL SUPERIOR (HUD TÁCTICO CON ICONOS)
 
@@ -135,7 +151,6 @@ public class Ventanajuego extends JFrame {
         panelInventario.add(crearSeparadorVertical());
         panelInventario.add(lblDef);
 
-        // El botón queda en el extremo derecho de la barra superior.
         JPanel panelBotonInicioSuperior = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         panelBotonInicioSuperior.setOpaque(false);
         panelBotonInicioSuperior.add(crearBotonInicio());
@@ -195,21 +210,14 @@ public class Ventanajuego extends JFrame {
         scrollLog.getViewport().setOpaque(false);
         scrollLog.setBorder(null);
 
-        // PANEL DEL REGISTRO DE ACONTECIMIENTOS Y DIARIO
         JPanel panelRegistro = new JPanel(new BorderLayout(10, 0));
         panelRegistro.setOpaque(false);
 
-        // Panel que contiene el botón del diario.
         JPanel panelBotonDiario = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         panelBotonDiario.setOpaque(false);
-
-        // Agregar la imagen diario.png al botón.
         panelBotonDiario.add(crearBotonDiario());
 
-        // Colocar el diario a la izquierda del registro.
         panelRegistro.add(panelBotonDiario, BorderLayout.WEST);
-
-        // Colocar el registro de acontecimientos a la derecha.
         panelRegistro.add(scrollLog, BorderLayout.CENTER);
 
         bottom.add(panelRegistro, BorderLayout.CENTER);
@@ -249,7 +257,6 @@ public class Ventanajuego extends JFrame {
             panelBotones.add(btn);
         }
 
-        // PANEL INFERIOR: se conservan los 10 botones de acciones.
         JPanel panelInferior = new JPanel(new BorderLayout(5, 5));
         panelInferior.setOpaque(false);
         panelInferior.add(panelBotones, BorderLayout.CENTER);
@@ -257,14 +264,71 @@ public class Ventanajuego extends JFrame {
         bottom.add(panelInferior, BorderLayout.SOUTH);
         add(bottom, BorderLayout.SOUTH);
 
-        // PANTALLA COMPLETA
+        // PANTALLA COMPLETA (todavía sin mostrar)
 
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setLocationRelativeTo(null);
+    }
 
-        // CAMBIO CORREGIDO: Usar invokeLater para que la ventana cargue su estructura 
-        // y despliegue el selector de personajes de forma fluida sin trabas en el EDT.
-        SwingUtilities.invokeLater(this::nuevaPartida);
+    // =========================================================================
+    // ARRANQUE SIN HUECOS ENTRE PANTALLAS
+    // =========================================================================
+
+    /**
+     * Muestra la selección de rol encima del menú (que sigue visible debajo),
+     * y cuando el jugador elige, abre la ventana del juego.
+     * Devuelve true si se inició la partida, false si el jugador volvió al menú.
+     * El menú debe cerrarlo quien lo llama cuando esto devuelve true.
+     */
+    public boolean iniciarDesde(JFrame menu) {
+
+        int r = elegirRol(menu);
+
+        if (r < 0) {
+            dispose();
+            return false;
+        }
+
+        iniciarPartida(r);
+
+        // El juego se muestra mientras el menú sigue debajo: no hay pantalla vacía.
+        setVisible(true);
+
+        return true;
+    }
+
+    // IMÁGENES: se leen y escalan UNA vez
+
+    private void precargarImagenes() {
+        iconoMedicoTarjeta = cargarIcono("/UltimoRef/img/Medicoo.png", 800, 530);
+        iconoSobrevivienteTarjeta = cargarIcono("/UltimoRef/img/superviviente.png", 750, 530);
+        iconoMedicoLateral = cargarIcono("/UltimoRef/img/Medicoo.png", 550, 400);
+        iconoSobrevivienteLateral = cargarIcono("/UltimoRef/img/superviviente.png", 550, 400);
+    }
+
+    /** Lee y escala una imagen de forma inmediata (sin carga diferida). */
+    private ImageIcon cargarIcono(String ruta, int ancho, int alto) {
+        try {
+            URL url = getClass().getResource(ruta);
+            if (url == null) {
+                return null;
+            }
+            BufferedImage original = ImageIO.read(url);
+            if (original == null) {
+                return null;
+            }
+            BufferedImage salida = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = salida.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                    RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING,
+                    RenderingHints.VALUE_RENDER_QUALITY);
+            g2.drawImage(original, 0, 0, ancho, alto, null);
+            g2.dispose();
+            return new ImageIcon(salida);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // REPRODUCIR SONIDO DE FONDO
@@ -280,7 +344,6 @@ public class Ventanajuego extends JFrame {
                 sonidoFondo = AudioSystem.getClip();
                 sonidoFondo.open(audio);
 
-                // Bajar el volumen para que sea ambiental
                 if (sonidoFondo.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
                     FloatControl volumen = (FloatControl) sonidoFondo.getControl(
                         FloatControl.Type.MASTER_GAIN
@@ -289,7 +352,6 @@ public class Ventanajuego extends JFrame {
                     volumen.setValue(-10.0f);
                 }
 
-                // Reproducir indefinidamente
                 sonidoFondo.loop(Clip.LOOP_CONTINUOUSLY);
 
                 audio.close();
@@ -319,37 +381,20 @@ public class Ventanajuego extends JFrame {
 
         JButton btnDiario = new JButton();
 
-        try {
-            // Cargar la imagen del libro desde la carpeta de imágenes.
-            URL urlLibro = getClass().getResource("/UltimoRef/img/diario.png");
+        ImageIcon icono = cargarIcono("/UltimoRef/img/diario.png", 180, 140);
 
-            if (urlLibro != null) {
-                ImageIcon iconoOriginal = new ImageIcon(urlLibro);
-
-                // Ajustar el tamaño de la imagen para utilizarla como botón.
-                Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(
-                    180, 140, Image.SCALE_SMOOTH
-                );
-
-                btnDiario.setIcon(new ImageIcon(imagenEscalada));
-
-            } else {
-                // Si no se encuentra la imagen, mostrar un texto alternativo.
-                btnDiario.setText("📖 DIARIO");
-            }
-
-        } catch (Exception e) {
+        if (icono != null) {
+            btnDiario.setIcon(icono);
+        } else {
             btnDiario.setText("📖 DIARIO");
         }
 
-        // Quitar el fondo y los bordes para que se vea solamente la imagen.
         btnDiario.setBorderPainted(false);
         btnDiario.setContentAreaFilled(false);
         btnDiario.setFocusPainted(false);
         btnDiario.setOpaque(false);
         btnDiario.setToolTipText("Abrir diario de supervivencia");
 
-        // Mantener la funcionalidad original del diario.
         btnDiario.addActionListener(e -> mostrarDiario());
 
         return btnDiario;
@@ -454,12 +499,12 @@ public class Ventanajuego extends JFrame {
 
             if (opcion == javax.swing.JOptionPane.YES_OPTION) {
 
-                // Detener la música y cerrar esta ventana de juego.
                 detenerSonidoFondo();
-                dispose();
 
-                // Abrir la pantalla principal del juego.
+                // Primero se abre el menú y recién después se cierra el juego,
+                // así nunca queda el escritorio a la vista.
                 new Pantallainicio();
+                dispose();
             }
         });
 
@@ -480,17 +525,10 @@ public class Ventanajuego extends JFrame {
         l.setForeground(colorTexto);
         l.setFont(new Font("SansSerif", Font.BOLD, 13));
 
-        try {
-            URL url = getClass().getResource(rutaRelativa);
-
-            if (url != null) {
-                ImageIcon iconoOriginal = new ImageIcon(url);
-                Image imgEscalada = iconoOriginal.getImage().getScaledInstance(
-                    18, 18, Image.SCALE_SMOOTH
-                );
-                l.setIcon(new ImageIcon(imgEscalada));
-            }
-        } catch (Exception ignored) {}
+        ImageIcon icono = cargarIcono(rutaRelativa, 18, 18);
+        if (icono != null) {
+            l.setIcon(icono);
+        }
 
         return l;
     }
@@ -498,17 +536,10 @@ public class Ventanajuego extends JFrame {
     private JLabel crearLabelIconoTexto(String rutaRelativa, String texto) {
         JLabel l = new JLabel(texto);
 
-        try {
-            URL url = getClass().getResource(rutaRelativa);
-
-            if (url != null) {
-                ImageIcon iconoOriginal = new ImageIcon(url);
-                Image imgEscalada = iconoOriginal.getImage().getScaledInstance(
-                    16, 16, Image.SCALE_SMOOTH
-                );
-                l.setIcon(new ImageIcon(imgEscalada));
-            }
-        } catch (Exception ignored) {}
+        ImageIcon icono = cargarIcono(rutaRelativa, 16, 16);
+        if (icono != null) {
+            l.setIcon(icono);
+        }
 
         return l;
     }
@@ -520,21 +551,24 @@ public class Ventanajuego extends JFrame {
         return separador;
     }
 
-    // PANTALLA DE INICIO (SELECCIÓN DE ROL)
+    // =========================================================================
+    // SELECCIÓN DE ROL
+    // =========================================================================
 
-    private void nuevaPartida() {
+    /**
+     * Muestra el diálogo de selección de rol (sin bordes, a pantalla completa)
+     * sobre la ventana "owner". Devuelve 0 = Médico, 1 = Sobreviviente, -1 = volver.
+     */
+    private int elegirRol(JFrame owner) {
 
-        JDialog dialogRol = new JDialog(
-            this,
-            "SELECCIÓN DE CLASE - ÚLTIMO REFUGIO",
-            true
-        );
+        JDialog dialogRol = new JDialog(owner, "SELECCIÓN DE CLASE - ÚLTIMO REFUGIO", true);
 
+        // Sin barra de título ni bordes: parece la misma pantalla.
+        dialogRol.setUndecorated(true);
         dialogRol.setLayout(new BorderLayout());
         dialogRol.setBounds(
             GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds()
         );
-        dialogRol.setLocationRelativeTo(this);
 
         JPanel panelFondoRol = new JPanel(new BorderLayout());
         panelFondoRol.setBackground(COLOR_FONDO_GENERAL);
@@ -571,22 +605,9 @@ public class Ventanajuego extends JFrame {
 
         JLabel lblImagenMedico = new JLabel();
         lblImagenMedico.setHorizontalAlignment(JLabel.CENTER);
-
-        try {
-            URL urlMedico = getClass().getResource("/UltimoRef/img/Medicoo.png");
-
-            if (urlMedico != null) {
-                ImageIcon iconoOriginal = new ImageIcon(urlMedico);
-
-                if (iconoOriginal.getIconWidth() > 0) {
-                    Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(
-                        800, 530, Image.SCALE_SMOOTH
-                    );
-
-                    lblImagenMedico.setIcon(new ImageIcon(imagenEscalada));
-                }
-            }
-        } catch (Exception ignored) {}
+        if (iconoMedicoTarjeta != null) {
+            lblImagenMedico.setIcon(iconoMedicoTarjeta);
+        }
 
         panelMedico.add(lblImagenMedico, BorderLayout.NORTH);
 
@@ -626,22 +647,9 @@ public class Ventanajuego extends JFrame {
 
         JLabel lblImagenSobreviviente = new JLabel();
         lblImagenSobreviviente.setHorizontalAlignment(JLabel.CENTER);
-
-        try {
-            URL urlSobreviviente = getClass().getResource("/UltimoRef/img/superviviente.png");
-
-            if (urlSobreviviente != null) {
-                ImageIcon iconoOriginal = new ImageIcon(urlSobreviviente);
-
-                if (iconoOriginal.getIconWidth() > 0) {
-                    Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(
-                        750, 530, Image.SCALE_SMOOTH
-                    );
-
-                    lblImagenSobreviviente.setIcon(new ImageIcon(imagenEscalada));
-                }
-            }
-        } catch (Exception ignored) {}
+        if (iconoSobrevivienteTarjeta != null) {
+            lblImagenSobreviviente.setIcon(iconoSobrevivienteTarjeta);
+        }
 
         panelSobreviviente.add(lblImagenSobreviviente, BorderLayout.NORTH);
 
@@ -675,32 +683,53 @@ public class Ventanajuego extends JFrame {
 
         panelFondoRol.add(panelRolesDesc, BorderLayout.CENTER);
 
+        // PIE: texto + botón para volver al menú (el diálogo no tiene botón de cerrar)
+
+        JPanel panelPie = new JPanel(new BorderLayout(5, 8));
+        panelPie.setOpaque(false);
+
         JLabel lblPie = new JLabel(
             "<html><div style='text-align: center; color: #889988; font-size: 11px;'>Cada elección altera drásticamente los eventos, desafíos y tácticas de supervivencia. Elige con sabiduría.</div></html>",
             JLabel.CENTER
         );
 
-        panelFondoRol.add(lblPie, BorderLayout.SOUTH);
+        JButton btnVolver = new JButton("< VOLVER AL MENÚ");
+        btnVolver.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btnVolver.setBackground(new Color(30, 40, 30));
+        btnVolver.setForeground(TEXTO_CLARO);
+        btnVolver.setFocusPainted(false);
+        btnVolver.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BOTON_BORDE, 2),
+            BorderFactory.createEmptyBorder(8, 18, 8, 18)
+        ));
+        btnVolver.addActionListener(e -> {
+            seleccionRol[0] = -1;
+            dialogRol.dispose();
+        });
+
+        JPanel panelBotonVolver = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        panelBotonVolver.setOpaque(false);
+        panelBotonVolver.add(btnVolver);
+
+        panelPie.add(lblPie, BorderLayout.CENTER);
+        panelPie.add(panelBotonVolver, BorderLayout.SOUTH);
+
+        panelFondoRol.add(panelPie, BorderLayout.SOUTH);
 
         dialogRol.add(panelFondoRol);
-        dialogRol.setVisible(true);
+        dialogRol.setVisible(true); // bloquea hasta que se elija un rol
 
-        int r = seleccionRol[0];
+        return seleccionRol[0];
+    }
 
-        // Si se cierra la selección sin elegir un personaje, regresamos al menú principal.
-        if (r < 0) {
-            dispose();
-            new Pantallainicio();
-            return;
-        }
+    /** Prepara la partida con el rol elegido (sin mostrar ni ocultar ventanas). */
+    private void iniciarPartida(int r) {
 
         String rolSeleccionado = (r == 0) ? "Médico" : "Sobreviviente";
 
         juego = new Juego(rolSeleccionado);
         fondo.setRol(rolSeleccionado);
         fondo.setLugar(Panelfondo.Lugar.PRINCIPAL);
-
-        // INICIAR MÚSICA DE FONDO
 
         detenerSonidoFondo();
         reproducirSonidoFondo();
@@ -719,9 +748,21 @@ public class Ventanajuego extends JFrame {
         }
 
         actualizar();
+    }
 
-        // Mostrar la ventana del juego una vez inicializada correctamente
-        setVisible(true);
+    /** Nueva partida desde dentro del juego (botón "JUGAR DE NUEVO"). */
+    private void nuevaPartida() {
+
+        int r = elegirRol(this);
+
+        if (r < 0) {
+            // Se abre el menú antes de cerrar esta ventana para no dejar huecos.
+            new Pantallainicio();
+            dispose();
+            return;
+        }
+
+        iniciarPartida(r);
     }
 
     // ACTUALIZAR PANEL LATERAL CON ROL E IMAGEN
@@ -736,26 +777,13 @@ public class Ventanajuego extends JFrame {
             + "</span></div></html>"
         );
 
-        String rutaImagen = rol.equals("Médico")
-            ? "/UltimoRef/img/Medicoo.png"
-            : "/UltimoRef/img/superviviente.png";
+        ImageIcon icono = rol.equals("Médico") ? iconoMedicoLateral : iconoSobrevivienteLateral;
 
-        try {
-            URL urlImg = getClass().getResource(rutaImagen);
-
-            if (urlImg != null) {
-                ImageIcon iconoOriginal = new ImageIcon(urlImg);
-
-                if (iconoOriginal.getIconWidth() > 0) {
-                    Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(
-                        550, 400, Image.SCALE_SMOOTH
-                    );
-
-                    lblImagenPerfilLateral.setIcon(new ImageIcon(imagenEscalada));
-                }
-            }
-
-        } catch (Exception ignored) {
+        if (icono != null) {
+            lblImagenPerfilLateral.setText("");
+            lblImagenPerfilLateral.setIcon(icono);
+        } else {
+            lblImagenPerfilLateral.setIcon(null);
             lblImagenPerfilLateral.setText("[Sin Imagen]");
             lblImagenPerfilLateral.setForeground(Color.WHITE);
         }
@@ -974,7 +1002,6 @@ public class Ventanajuego extends JFrame {
 
     private void mostrarFin() {
 
-        // Detener la música cuando termina la partida
         detenerSonidoFondo();
 
         for (JButton b : botones) {
@@ -997,11 +1024,11 @@ public class Ventanajuego extends JFrame {
             true
         );
 
+        dialogFin.setUndecorated(true);
         dialogFin.setLayout(new BorderLayout());
         dialogFin.setBounds(
             GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds()
         );
-        dialogFin.setLocationRelativeTo(this);
 
         JPanel panelFondoFin = new JPanel(new BorderLayout());
         panelFondoFin.setBackground(new Color(18, 10, 10));
@@ -1114,9 +1141,8 @@ public class Ventanajuego extends JFrame {
         }
     }
 
-    // ==========================================
     // CREAR TARJETAS DE ESTADÍSTICAS
-    // ==========================================
+
     private JPanel crearTarjetaStat(String titulo, String valor, Color colorValor) {
 
         JPanel tarjeta = new JPanel(new BorderLayout(5, 5));

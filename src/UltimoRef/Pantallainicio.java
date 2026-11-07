@@ -11,22 +11,17 @@ import javax.sound.sampled.Clip;
 
 public class Pantallainicio extends JFrame {
 
-    
     // COLORES
-    
+
     private final Color VERDE = new Color(75, 145, 85);
     private final Color TEXTO = new Color(225, 235, 215);
     private final Color FONDO_BOTON = new Color(15, 25, 17);
 
-    
     // VARIABLE DE MUSICA
-    
 
     private Clip musica;
 
-    
     // CONSTRUCTOR
-    
 
     public Pantallainicio() {
 
@@ -34,9 +29,7 @@ public class Pantallainicio extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-        
         // FONDO DEL MENU
-        
 
         JPanel fondo = new JPanel() {
 
@@ -100,9 +93,7 @@ public class Pantallainicio extends JFrame {
 
         fondo.setLayout(new GridBagLayout());
 
-        
         // PANEL PRINCIPAL
-        
 
         JPanel menu = new JPanel();
 
@@ -112,9 +103,7 @@ public class Pantallainicio extends JFrame {
 
         menu.setOpaque(false);
 
-        
         // TITULO
-       
 
         TituloAnimado titulo = new TituloAnimado(
             "EL ÚLTIMO REFUGIO"
@@ -128,9 +117,7 @@ public class Pantallainicio extends JFrame {
             new Font("Serif", Font.BOLD, 55)
         );
 
-        
         // SUBTITULO
-       
 
         JLabel subtitulo = new JLabel(
             "LA CIVILIZACIÓN CAYÓ. SOBREVIVIR ES TU ÚNICA OPCIÓN."
@@ -146,9 +133,7 @@ public class Pantallainicio extends JFrame {
             new Font("SansSerif", Font.BOLD, 14)
         );
 
-        
         // LINEA DECORATIVA
-        
 
         JPanel linea = new JPanel();
 
@@ -162,17 +147,13 @@ public class Pantallainicio extends JFrame {
             Component.CENTER_ALIGNMENT
         );
 
-        
         // BOTON JUGAR
-        
 
         JButton btnJugar = crearBoton("JUGAR");
 
         btnJugar.addActionListener(e -> iniciarJuego());
 
-        
         // BOTON CONTINUAR
-        
 
         JButton btnContinuar = crearBoton("CONTINUAR");
 
@@ -182,9 +163,7 @@ public class Pantallainicio extends JFrame {
             "Todavía no hay partidas guardadas"
         );
 
-        
         // BOTON COMO JUGAR
-        
 
         JButton btnComoJugar = crearBoton("CÓMO JUGAR");
 
@@ -192,9 +171,7 @@ public class Pantallainicio extends JFrame {
             e -> mostrarInstrucciones()
         );
 
-        
         // BOTON SALIR
-        
 
         JButton btnSalir = crearBoton("SALIR");
 
@@ -217,9 +194,7 @@ public class Pantallainicio extends JFrame {
             }
         });
 
-        
         // AGREGAR COMPONENTES
-        
 
         menu.add(titulo);
 
@@ -249,9 +224,7 @@ public class Pantallainicio extends JFrame {
 
         menu.add(Box.createVerticalStrut(40));
 
-        
         // FRASE INFERIOR
-        
 
         JLabel frase = new JLabel(
             "\"Cada día es una nueva oportunidad para sobrevivir.\""
@@ -271,9 +244,7 @@ public class Pantallainicio extends JFrame {
 
         menu.add(frase);
 
-        
         // UBICAR MENU
-        
 
         GridBagConstraints gbc = new GridBagConstraints();
 
@@ -286,9 +257,7 @@ public class Pantallainicio extends JFrame {
 
         setContentPane(fondo);
 
-       
         // CERRAR VENTANA
-       
 
         addWindowListener(new WindowAdapter() {
 
@@ -302,18 +271,14 @@ public class Pantallainicio extends JFrame {
 
         setVisible(true);
 
-        
         // ANIMACION Y MUSICA
-       
 
         titulo.iniciarAnimacion();
 
         reproducirMusica();
     }
 
-    
     // TITULO ANIMADO
-   
 
     private class TituloAnimado extends JLabel {
 
@@ -361,9 +326,7 @@ public class Pantallainicio extends JFrame {
         }
     }
 
-   
     // CREAR BOTONES
-    
 
     private JButton crearBoton(String texto) {
 
@@ -439,29 +402,33 @@ public class Pantallainicio extends JFrame {
         return boton;
     }
 
-    
-    // INICIAR PARTIDA (MODIFICADO)
-    
+    // INICIAR PARTIDA (SIN HUECOS ENTRE PANTALLAS)
 
     private void iniciarJuego() {
-        // 1. Ocultar la pantalla actual inmediatamente para dar respuesta visual rápida
-        setVisible(false);
 
-        // 2. Detener la música en un hilo separado para que no bloquee el hilo principal (EDT)
-        new Thread(() -> {
-            detenerMusica();
-        }).start();
+        // El menú sigue visible mientras se carga todo lo demás.
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-        // 3. Cargar la siguiente ventana y luego liberar esta
+        // invokeLater permite que el cursor se actualice antes de la carga pesada.
         SwingUtilities.invokeLater(() -> {
-            new UltimoRef.Ventanajuego();
-            dispose();
+
+            // Se construye la ventana del juego (imágenes, HUD, etc.) con el menú aún a la vista.
+            Ventanajuego juego = new Ventanajuego();
+
+            // Muestra la selección de rol por encima del menú y, al terminar,
+            // abre el juego. Devuelve false si el jugador volvió atrás.
+            boolean iniciado = juego.iniciarDesde(this);
+
+            if (iniciado) {
+                detenerMusica();
+                dispose(); // El menú se cierra recién cuando el juego ya está visible.
+            } else {
+                setCursor(Cursor.getDefaultCursor());
+            }
         });
     }
 
-    
     // INSTRUCCIONES
-    
 
     private void mostrarInstrucciones() {
 
@@ -528,9 +495,7 @@ public class Pantallainicio extends JFrame {
         );
     }
 
-    
     // REPRODUCIR AUDIO WAV EN BUCLE
-    
 
     private void reproducirMusica() {
 
@@ -569,9 +534,7 @@ public class Pantallainicio extends JFrame {
         }
     }
 
-    
     // DETENER AUDIO
-    
 
     private void detenerMusica() {
 
