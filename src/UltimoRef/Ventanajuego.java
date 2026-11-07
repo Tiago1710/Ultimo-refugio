@@ -24,6 +24,12 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
+// ===== [CAMBIO SUPABASE 1] Imports nuevos para el guardado en segundo plano =====
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.swing.SwingUtilities;
+// ===== FIN CAMBIO 1 =====
+
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.AudioInputStream;
@@ -45,6 +51,16 @@ public class Ventanajuego extends JFrame {
 
     private Juego juego;
     private int mejorPuntuacion = 0;
+
+    // ===== [CAMBIO SUPABASE 2] =====
+    // Cola de guardado en un solo hilo: los guardados se hacen en orden
+    // y nunca congelan la interfaz.
+    private final ExecutorService guardador = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "guardado-supabase");
+        t.setDaemon(true);
+        return t;
+    });
+    // ===== FIN CAMBIO 2 =====
 
     // SONIDO AMBIENTAL DEL JUEGO
 
@@ -296,6 +312,74 @@ public class Ventanajuego extends JFrame {
 
         return true;
     }
+
+    // ===== [CAMBIO SUPABASE 3] =====
+    // MÉTODOS NUEVOS: CONTINUAR UNA PARTIDA GUARDADA Y GUARDAR EN LA NUBE
+
+    /**
+     * Abre el juego directamente en una partida guardada (botón CONTINUAR).
+     * Se saltea la selección de rol: el rol viene dentro de la partida.
+     */
+    public boolean continuarDesde(JFrame menu, Juego guardado) {
+
+        restaurarPartida(guardado);
+
+        // El juego se muestra mientras el menú sigue debajo: no hay pantalla vacía.
+        setVisible(true);
+
+        return true;
+    }
+
+    /** Deja la interfaz lista con los datos de una partida guardada. */
+    private void restaurarPartida(Juego guardado) {
+
+        juego = guardado;
+
+        String rol = guardado.getRol();
+
+        fondo.setRol(rol);
+        fondo.setLugar(Panelfondo.Lugar.PRINCIPAL);
+
+        detenerSonidoFondo();
+        reproducirSonidoFondo();
+
+        actualizarPanelLateral(rol);
+
+        txtLog.setText(
+            "=== PARTIDA RESTAURADA ===\n"
+            + "Bienvenido de vuelta, " + SupabaseClient.username + ".\n"
+            + "Retomás tu travesía como " + rol.toUpperCase()
+            + " en el día " + guardado.getDias() + ".\n"
+            + "El refugio te esperaba."
+        );
+
+        for (JButton b : botones) {
+            b.setEnabled(true);
+        }
+
+        actualizar();
+    }
+
+    /** Guarda la partida en Supabase sin congelar la interfaz. */
+    private void guardarEnNube() {
+
+        if (!SupabaseClient.haySesion() || juego == null) {
+            return;
+        }
+
+        final Juego copia = juego;
+
+        guardador.submit(() -> {
+            try {
+                SupabaseClient.guardarPartida(copia);
+            } catch (Exception ex) {
+                System.out.println("Error al guardar: " + ex.getMessage());
+                SwingUtilities.invokeLater(() ->
+                    txtLog.append("\n\n⚠ No se pudo guardar el progreso (sin conexión)."));
+            }
+        });
+    }
+    // ===== FIN CAMBIO 3 =====
 
     // IMÁGENES: se leen y escalan UNA vez
 
@@ -549,18 +633,31 @@ public class Ventanajuego extends JFrame {
 
         btnInicio.addActionListener(e -> {
 
+            // ===== [CAMBIO SUPABASE 4] =====
+            // Antes decía "Perderás el progreso de la partida actual."
+            // Ahora el progreso se guarda, así que se cambia el mensaje
+            // y se guarda la partida antes de volver al menú.
             int opcion = javax.swing.JOptionPane.showConfirmDialog(
                 this,
-                "¿Estás seguro de que querés volver al menú principal?\n"
-                + "Perderás el progreso de la partida actual.",
+                "¿Querés volver al menú principal?\n"
+                + "Tu progreso queda guardado y podés retomarlo con CONTINUAR.",
                 "VOLVER AL INICIO",
                 javax.swing.JOptionPane.YES_NO_OPTION,
-                javax.swing.JOptionPane.WARNING_MESSAGE
+                javax.swing.JOptionPane.QUESTION_MESSAGE
             );
 
             if (opcion == javax.swing.JOptionPane.YES_OPTION) {
 
                 detenerSonidoFondo();
+
+                // Se guarda y se espera a que termine, para que el menú
+                // encuentre la partida actualizada al consultar CONTINUAR.
+                try {
+                    SupabaseClient.guardarPartida(juego);
+                } catch (Exception ex) {
+                    System.out.println("Error al guardar: " + ex.getMessage());
+                }
+            // ===== FIN CAMBIO 4 =====
 
                 // Primero se abre el menú y recién después se cierra el juego,
                 // así nunca queda el escritorio a la vista.
@@ -847,6 +944,11 @@ public class Ventanajuego extends JFrame {
         }
 
         actualizar();
+
+        // ===== [CAMBIO SUPABASE 5] =====
+        // La partida nueva se guarda desde el día 1 (reemplaza la anterior, si había).
+        guardarEnNube();
+        // ===== FIN CAMBIO 5 =====
     }
 
     /** Nueva partida desde dentro del juego (botón "JUGAR DE NUEVO"). */
@@ -927,6 +1029,13 @@ public class Ventanajuego extends JFrame {
         txtLog.setCaretPosition(0);
 
         actualizar();
+
+        // ===== [CAMBIO SUPABASE 6] =====
+        // Se guarda el progreso al cerrar cada día.
+        // Si el personaje murió, se guarda con vivo=false:
+        // CONTINUAR queda deshabilitado y la partida terminada no se retoma.
+        guardarEnNube();
+        // ===== FIN CAMBIO 6 =====
 
         if (!juego.isVivo()) {
             mostrarFin();

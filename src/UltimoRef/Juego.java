@@ -52,6 +52,20 @@ public class Juego {
         }
     }
 
+ /* Conexión con la bdd */
+ public Juego(String rol, int salud, int provisiones, int medicinas, int municion,
+             int defensa, int dias, int puntuacion, List<String> diario) {
+    this.rol = rol;
+    this.salud = salud;
+    this.provisiones = provisiones;
+    this.medicinas = medicinas;
+    this.municion = municion;
+    this.defensa = defensa;
+    this.dias = dias;
+    this.puntuacion = puntuacion;
+    this.diario.addAll(diario);
+}   
+    
     public String jugarDia(Accion accion) {
         log = new StringBuilder();
         decision = null;

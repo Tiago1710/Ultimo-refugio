@@ -21,6 +21,12 @@ public class Pantallainicio extends JFrame {
 
     private Clip musica;
 
+    // ===== [CAMBIO SUPABASE 1] =====
+    // Indica si el usuario tiene una partida guardada en Supabase.
+    // Se usa para avisar antes de pisarla al empezar una partida nueva.
+    private boolean hayGuardada = false;
+    // ===== FIN CAMBIO 1 =====
+
     // CONSTRUCTOR
 
     public Pantallainicio() {
@@ -155,6 +161,10 @@ public class Pantallainicio extends JFrame {
 
         // BOTON CONTINUAR
 
+        // ===== [CAMBIO SUPABASE 2] =====
+        // Antes: el botón quedaba siempre deshabilitado.
+        // Ahora: se consulta en segundo plano si hay partida guardada
+        // y, si existe, se habilita y se conecta con continuarJuego().
         JButton btnContinuar = crearBoton("CONTINUAR");
 
         btnContinuar.setEnabled(false);
@@ -163,6 +173,26 @@ public class Pantallainicio extends JFrame {
             "Todavía no hay partidas guardadas"
         );
 
+        btnContinuar.addActionListener(e -> continuarJuego());
+
+        // Consultar en segundo plano (para no congelar el menú)
+        new Thread(() -> {
+            try {
+                Juego guardado = SupabaseClient.cargarPartida();
+                if (guardado != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        hayGuardada = true;
+                        btnContinuar.setEnabled(true);
+                        btnContinuar.setToolTipText(
+                            "Día " + guardado.getDias() + " · " + guardado.getRol());
+                    });
+                }
+            } catch (Exception ex) {
+                System.out.println("No se pudo consultar la partida: " + ex.getMessage());
+            }
+        }).start();
+        // ===== FIN CAMBIO 2 =====
+
         // BOTON COMO JUGAR
 
         JButton btnComoJugar = crearBoton("CÓMO JUGAR");
@@ -170,6 +200,18 @@ public class Pantallainicio extends JFrame {
         btnComoJugar.addActionListener(
             e -> mostrarInstrucciones()
         );
+
+        // ===== [CAMBIO SUPABASE 3] =====
+        // Botón nuevo: cerrar sesión y volver a la pantalla de login.
+        JButton btnUsuario = crearBoton("CAMBIAR DE USUARIO");
+
+        btnUsuario.addActionListener(e -> {
+            detenerMusica();
+            SupabaseClient.cerrarSesion();
+            new PantallaLogin();
+            dispose();
+        });
+        // ===== FIN CAMBIO 3 =====
 
         // BOTON SALIR
 
@@ -220,6 +262,12 @@ public class Pantallainicio extends JFrame {
 
         menu.add(Box.createVerticalStrut(12));
 
+        // ===== [CAMBIO SUPABASE 3 - continuación] =====
+        menu.add(btnUsuario);
+
+        menu.add(Box.createVerticalStrut(12));
+        // ===== FIN CAMBIO 3 =====
+
         menu.add(btnSalir);
 
         menu.add(Box.createVerticalStrut(40));
@@ -243,6 +291,18 @@ public class Pantallainicio extends JFrame {
         );
 
         menu.add(frase);
+
+        // ===== [CAMBIO SUPABASE 4] =====
+        // Muestra el nombre del jugador que inició sesión.
+        menu.add(Box.createVerticalStrut(10));
+
+        JLabel lblJugador = new JLabel("Jugador: " + SupabaseClient.username);
+        lblJugador.setForeground(VERDE);
+        lblJugador.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lblJugador.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        menu.add(lblJugador);
+        // ===== FIN CAMBIO 4 =====
 
         // UBICAR MENU
 
@@ -406,6 +466,19 @@ public class Pantallainicio extends JFrame {
 
     private void iniciarJuego() {
 
+        // ===== [CAMBIO SUPABASE 5] =====
+        // Si ya hay una partida guardada, se avisa que empezar una nueva la reemplaza.
+        // (Solo se reemplaza si después elige rol; si vuelve atrás, queda intacta.)
+        if (hayGuardada) {
+            int r = JOptionPane.showConfirmDialog(this,
+                "Ya tenés una partida guardada.\nSi empezás una nueva, se va a reemplazar.\n¿Querés continuar?",
+                "NUEVA PARTIDA", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (r != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+        // ===== FIN CAMBIO 5 =====
+
         // El menú sigue visible mientras se carga todo lo demás.
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
@@ -427,6 +500,49 @@ public class Pantallainicio extends JFrame {
             }
         });
     }
+
+    // ===== [CAMBIO SUPABASE 6] =====
+    // MÉTODO NUEVO: CONTINUAR PARTIDA GUARDADA
+    // Carga la partida desde Supabase (en segundo plano) y abre el juego donde se dejó.
+
+    private void continuarJuego() {
+
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+        new SwingWorker<Juego, Void>() {
+
+            @Override
+            protected Juego doInBackground() throws Exception {
+                return SupabaseClient.cargarPartida();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Juego guardado = get();
+
+                    if (guardado == null) {
+                        JOptionPane.showMessageDialog(Pantallainicio.this,
+                            "No hay una partida guardada.");
+                        setCursor(Cursor.getDefaultCursor());
+                        return;
+                    }
+
+                    Ventanajuego v = new Ventanajuego();
+                    v.continuarDesde(Pantallainicio.this, guardado);
+
+                    detenerMusica();
+                    dispose();
+
+                } catch (Exception ex) {
+                    setCursor(Cursor.getDefaultCursor());
+                    JOptionPane.showMessageDialog(Pantallainicio.this,
+                        "No se pudo cargar la partida:\n" + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
+    // ===== FIN CAMBIO 6 =====
 
     // INSTRUCCIONES
 
