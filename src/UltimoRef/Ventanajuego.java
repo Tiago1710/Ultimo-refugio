@@ -66,12 +66,15 @@ public class Ventanajuego extends JFrame {
 
     private Clip sonidoFondo;
 
-    // IMÁGENES PRECARGADAS (se escalan una sola vez al crear la ventana)
+    // IMÁGENES PRECARGADAS
 
     private ImageIcon iconoMedicoTarjeta;
     private ImageIcon iconoSobrevivienteTarjeta;
-    private ImageIcon iconoMedicoLateral;
-    private ImageIcon iconoSobrevivienteLateral;
+
+    private BufferedImage imagenMedicoOriginal;
+    private BufferedImage imagenSobrevivienteOriginal;
+
+    private String rolLateral;
 
     // Componentes visuales principales del HUD
     private final Panelfondo fondo = new Panelfondo();
@@ -118,7 +121,7 @@ public class Ventanajuego extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(COLOR_FONDO_GENERAL);
 
-        // Se cargan y escalan las imágenes pesadas una sola vez.
+        // Se cargan las imágenes una sola vez.
         precargarImagenes();
 
         // PANEL SUPERIOR (HUD TÁCTICO CON ICONOS)
@@ -186,7 +189,10 @@ public class Ventanajuego extends JFrame {
 
         // Configuración del Panel Lateral
         panelLateral.setBackground(new Color(14, 20, 14));
-        panelLateral.setPreferredSize(new Dimension(180, 0));
+
+        int anchoLateral = Math.max(280, getToolkit().getScreenSize().width / 5);
+        panelLateral.setPreferredSize(new Dimension(anchoLateral, 0));
+
         panelLateral.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(50, 80, 50), 2),
             BorderFactory.createEmptyBorder(10, 8, 10, 8)
@@ -196,8 +202,17 @@ public class Ventanajuego extends JFrame {
         lblRolLateralTitulo.setForeground(new Color(240, 220, 130));
         panelLateral.add(lblRolLateralTitulo, BorderLayout.NORTH);
 
+        lblImagenPerfilLateral.setHorizontalAlignment(JLabel.CENTER);
         lblImagenPerfilLateral.setVerticalAlignment(JLabel.CENTER);
         panelLateral.add(lblImagenPerfilLateral, BorderLayout.CENTER);
+
+        // Se actualiza el tamaño de la imagen cuando cambia el espacio disponible.
+        lblImagenPerfilLateral.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                actualizarImagenLateral();
+            }
+        });
 
         panelCentroCompleto.add(panelLateral, BorderLayout.WEST);
         panelCentroCompleto.add(fondo, BorderLayout.CENTER);
@@ -381,13 +396,24 @@ public class Ventanajuego extends JFrame {
     }
     // ===== FIN CAMBIO 3 =====
 
-    // IMÁGENES: se leen y escalan UNA vez
+    // IMÁGENES
 
     private void precargarImagenes() {
         iconoMedicoTarjeta = cargarIcono("/UltimoRef/img/Medicoo.png", 800, 530);
         iconoSobrevivienteTarjeta = cargarIcono("/UltimoRef/img/superviviente.png", 750, 530);
-        iconoMedicoLateral = cargarIcono("/UltimoRef/img/Medicoo.png", 550, 400);
-        iconoSobrevivienteLateral = cargarIcono("/UltimoRef/img/superviviente.png", 550, 400);
+
+        try {
+            imagenMedicoOriginal = ImageIO.read(
+                getClass().getResource("/UltimoRef/img/Medicoo.png")
+            );
+
+            imagenSobrevivienteOriginal = ImageIO.read(
+                getClass().getResource("/UltimoRef/img/superviviente.png")
+            );
+
+        } catch (Exception e) {
+            System.out.println("Error al cargar las imágenes de los personajes.");
+        }
     }
 
     /** Lee y escala una imagen de forma inmediata (sin carga diferida). */
@@ -461,7 +487,7 @@ public class Ventanajuego extends JFrame {
 
     // BOTÓN CON IMAGEN DEL LIBRO: ABRIR EL DIARIO DE SUPERVIVENCIA
 
-       private JButton crearBotonDiario() {
+    private JButton crearBotonDiario() {
 
         JButton btnDiario = new JButton();
 
@@ -544,7 +570,7 @@ public class Ventanajuego extends JFrame {
 
         return new ImageIcon(salida);
     }
-    
+
     // VENTANA QUE MUESTRA LO QUE FUE SUCEDIENDO DÍA A DÍA
 
     private void mostrarDiario() {
@@ -657,7 +683,7 @@ public class Ventanajuego extends JFrame {
                 } catch (Exception ex) {
                     System.out.println("Error al guardar: " + ex.getMessage());
                 }
-            // ===== FIN CAMBIO 4 =====
+                // ===== FIN CAMBIO 4 =====
 
                 // Primero se abre el menú y recién después se cierra el juego,
                 // así nunca queda el escritorio a la vista.
@@ -780,7 +806,7 @@ public class Ventanajuego extends JFrame {
 
         panelMedico.add(lblMedicoDesc, BorderLayout.CENTER);
 
-              JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
+        JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
         btnMedico.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnMedico.setBackground(new Color(25, 70, 120));
         btnMedico.setForeground(Color.WHITE);
@@ -810,7 +836,7 @@ public class Ventanajuego extends JFrame {
             seleccionRol[0] = 0;
             dialogRol.dispose();
         });
-        
+
         panelMedico.add(btnMedico, BorderLayout.SOUTH);
 
         // TARJETA 2: SOBREVIVIENTE
@@ -841,7 +867,7 @@ public class Ventanajuego extends JFrame {
 
         panelSobreviviente.add(lblSobrevivienteDesc, BorderLayout.CENTER);
 
-               JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
+        JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
         btnSobreviviente.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSobreviviente.setBackground(new Color(160, 60, 20));
         btnSobreviviente.setForeground(Color.WHITE);
@@ -970,6 +996,8 @@ public class Ventanajuego extends JFrame {
 
     private void actualizarPanelLateral(String rol) {
 
+        rolLateral = rol;
+
         lblRolLateralTitulo.setText(
             "<html><div style='text-align: center;'>Sos:<br><span style='color: "
             + (rol.equals("Médico") ? "#64B5F6" : "#FFB74D")
@@ -978,16 +1006,51 @@ public class Ventanajuego extends JFrame {
             + "</span></div></html>"
         );
 
-        ImageIcon icono = rol.equals("Médico") ? iconoMedicoLateral : iconoSobrevivienteLateral;
+        actualizarImagenLateral();
 
-        if (icono != null) {
-            lblImagenPerfilLateral.setText("");
-            lblImagenPerfilLateral.setIcon(icono);
-        } else {
+        SwingUtilities.invokeLater(this::actualizarImagenLateral);
+    }
+
+    private void actualizarImagenLateral() {
+
+        if (rolLateral == null) {
+            return;
+        }
+
+        BufferedImage imagen = rolLateral.equals("Médico")
+            ? imagenMedicoOriginal
+            : imagenSobrevivienteOriginal;
+
+        if (imagen == null) {
             lblImagenPerfilLateral.setIcon(null);
             lblImagenPerfilLateral.setText("[Sin Imagen]");
             lblImagenPerfilLateral.setForeground(Color.WHITE);
+            return;
         }
+
+        int ancho = lblImagenPerfilLateral.getWidth() - 10;
+        int alto = lblImagenPerfilLateral.getHeight() - 10;
+
+        if (ancho <= 0 || alto <= 0) {
+            return;
+        }
+
+        double escala = Math.min(
+            (double) ancho / imagen.getWidth(),
+            (double) alto / imagen.getHeight()
+        );
+
+        int nuevoAncho = Math.max(1, (int) (imagen.getWidth() * escala));
+        int nuevoAlto = Math.max(1, (int) (imagen.getHeight() * escala));
+
+        Image imagenEscalada = imagen.getScaledInstance(
+            nuevoAncho,
+            nuevoAlto,
+            Image.SCALE_SMOOTH
+        );
+
+        lblImagenPerfilLateral.setText("");
+        lblImagenPerfilLateral.setIcon(new ImageIcon(imagenEscalada));
     }
 
     // FLUJO PRINCIPAL DE EJECUCIÓN DE ACCIONES
@@ -1357,7 +1420,7 @@ public class Ventanajuego extends JFrame {
         // ===== FIN CAMBIO RANKING 3 =====
 
         panelBotonesFin.add(btnReiniciar);
-        panelBotonesFin.add(btnRankingFin);   // <-- nuevo
+        panelBotonesFin.add(btnRankingFin);
         panelBotonesFin.add(btnSalir);
 
         panelContenidoFin.add(panelBotonesFin, BorderLayout.SOUTH);
