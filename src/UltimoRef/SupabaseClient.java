@@ -205,6 +205,69 @@ public class SupabaseClient {
     // UTILIDADES
     // =====================================================================
 
+    // =====================================================================
+    // ===== [NUEVO] RANKING =====
+    // =====================================================================
+
+    /**
+     * Registra el puntaje de una partida terminada.
+     * Solo se guarda si supera la mejor puntuación anterior del jugador
+     * (una fila por jugador en el ranking).
+     */
+    public static void guardarRanking(Juego j) throws IOException {
+        if (!haySesion()) return;
+
+        // 1. Consultar el mejor puntaje actual de este jugador
+        Resp actual = authed("GET",
+                "/rest/v1/ranking?user_id=eq." + userId + "&select=puntuacion", null, null);
+        if (actual.codigo < 400) {
+            String previo = extraer(actual.cuerpo, "\"puntuacion\"\\s*:\\s*(-?\\d+)");
+            if (previo != null && Integer.parseInt(previo) >= j.getPuntuacion()) {
+                return; // no superó su récord
+            }
+        }
+
+        // 2. Insertar o actualizar su fila
+        String json = "{"
+                + "\"user_id\":\"" + userId + "\","
+                + "\"username\":\"" + esc(username) + "\","
+                + "\"rol\":\"" + esc(j.getRol()) + "\","
+                + "\"puntuacion\":" + j.getPuntuacion() + ","
+                + "\"dias\":" + j.getDias() + ","
+                + "\"updated_at\":\"" + java.time.Instant.now() + "\""
+                + "}";
+
+        Resp r = authed("POST", "/rest/v1/ranking", json, "resolution=merge-duplicates");
+        if (r.codigo >= 400) throw new IOException("No se pudo guardar el ranking: " + r.cuerpo);
+    }
+
+    /**
+     * Devuelve los 10 mejores. Cada elemento: {usuario, rol, dias, puntuacion}.
+     * Orden: más puntos primero; en empate, más días primero.
+     */
+    public static List<String[]> obtenerTop10() throws IOException {
+        Resp r = authed("GET",
+                "/rest/v1/ranking?select=username,rol,dias,puntuacion"
+                + "&order=puntuacion.desc,dias.desc&limit=10", null, null);
+        if (r.codigo >= 400) throw new IOException("No se pudo cargar el ranking: " + r.cuerpo);
+
+        List<String[]> top = new ArrayList<>();
+        Matcher m = Pattern.compile("\\{[^{}]*\\}").matcher(r.cuerpo);
+        while (m.find()) {
+            String obj = m.group();
+            String usuario = extraer(obj, "\"username\"\\s*:\\s*\"([^\"]*)\"");
+            String rol = extraer(obj, "\"rol\"\\s*:\\s*\"([^\"]*)\"");
+            top.add(new String[] {
+                usuario == null ? "?" : usuario,
+                rol == null ? "-" : rol,
+                String.valueOf(num(obj, "dias")),
+                String.valueOf(num(obj, "puntuacion"))
+            });
+        }
+        return top;
+    }
+    // ===== FIN RANKING =====
+
     private static int num(String json, String campo) {
         String v = extraer(json, "\"" + campo + "\"\\s*:\\s*(-?\\d+)");
         return v == null ? 0 : Integer.parseInt(v);

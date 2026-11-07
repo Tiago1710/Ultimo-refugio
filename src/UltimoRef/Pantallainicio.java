@@ -213,6 +213,13 @@ public class Pantallainicio extends JFrame {
         });
         // ===== FIN CAMBIO 3 =====
 
+        // ===== [CAMBIO RANKING 1] =====
+        // Botón nuevo: abre el top 10 de jugadores.
+        JButton btnRanking = crearBoton("RANKING");
+
+        btnRanking.addActionListener(e -> new PantallaRanking(this));
+        // ===== FIN CAMBIO RANKING 1 =====
+
         // BOTON SALIR
 
         JButton btnSalir = crearBoton("SALIR");
@@ -261,6 +268,12 @@ public class Pantallainicio extends JFrame {
         menu.add(btnComoJugar);
 
         menu.add(Box.createVerticalStrut(12));
+
+        // ===== [CAMBIO RANKING 1 - continuación] =====
+        menu.add(btnRanking);
+
+        menu.add(Box.createVerticalStrut(12));
+        // ===== FIN CAMBIO RANKING 1 =====
 
         // ===== [CAMBIO SUPABASE 3 - continuación] =====
         menu.add(btnUsuario);

@@ -1218,6 +1218,19 @@ public class Ventanajuego extends JFrame {
 
         mejorPuntuacion = Math.max(mejorPuntuacion, juego.getPuntuacion());
 
+        // ===== [CAMBIO RANKING 2] =====
+        // Registra el puntaje en el ranking (solo si supera su récord anterior).
+        // Se hace en segundo plano para no trabar la pantalla final.
+        final Juego terminada = juego;
+        guardador.submit(() -> {
+            try {
+                SupabaseClient.guardarRanking(terminada);
+            } catch (Exception ex) {
+                System.out.println("Error al guardar ranking: " + ex.getMessage());
+            }
+        });
+        // ===== FIN CAMBIO RANKING 2 =====
+
         StringBuilder sb = new StringBuilder();
 
         sb.append("=== BITÁCORA / REGISTRO HISTÓRICO DE SUPERVIVENCIA ===\n\n");
@@ -1332,7 +1345,19 @@ public class Ventanajuego extends JFrame {
             dialogFin.dispose();
         });
 
+        // ===== [CAMBIO RANKING 3] =====
+        // Botón nuevo en la pantalla final: abre el top 10.
+        JButton btnRankingFin = new JButton("VER RANKING");
+        btnRankingFin.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnRankingFin.setBackground(new Color(120, 90, 20));
+        btnRankingFin.setForeground(Color.WHITE);
+        btnRankingFin.setPreferredSize(new Dimension(220, 45));
+        btnRankingFin.setFocusPainted(false);
+        btnRankingFin.addActionListener(e -> new PantallaRanking(dialogFin));
+        // ===== FIN CAMBIO RANKING 3 =====
+
         panelBotonesFin.add(btnReiniciar);
+        panelBotonesFin.add(btnRankingFin);   // <-- nuevo
         panelBotonesFin.add(btnSalir);
 
         panelContenidoFin.add(panelBotonesFin, BorderLayout.SOUTH);
