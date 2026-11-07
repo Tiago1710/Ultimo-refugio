@@ -14,12 +14,19 @@ public class Juego {
     public static class Decision {
         public final int tipo;
         public final String texto;
+        /** Opciones tal como se muestran al jugador: sin avisar cuánta salud se pierde. */
         public final String[] opciones;
+        /** Opciones completas (con todos sus efectos). Solo las usa la lógica del juego. */
+        final String[] reales;
         
         Decision(int tipo, String texto, String... opciones) {
             this.tipo = tipo;
             this.texto = texto;
-            this.opciones = opciones;
+            this.reales = opciones;
+            this.opciones = new String[opciones.length];
+            for (int i = 0; i < opciones.length; i++) {
+                this.opciones[i] = ocultarDanio(opciones[i]);
+            }
         }
     }
 
@@ -30,6 +37,27 @@ public class Juego {
     private static final Pattern EFECTO = Pattern.compile(
             "([+\\-\\u2212])\\s*(\\d+)\\s+(Salud|Provisi[oó]n(?:es)?|Medicinas?|Munici[oó]n(?:es)?|Defensa|Puntos?)",
             Pattern.CASE_INSENSITIVE);
+
+    /** Opciones de tipo "prudente" (ignorar, retirarse, rodear...). Tienen menos riesgo que las audaces. */
+    private static final Pattern PRUDENTE = Pattern.compile(
+            "^(ignor|dej|retir|rode|march|alej|evit|contin|cerrar|descart|pasar de|no |abandon|rechaz|bajar|dar media|dar la vuelta|apagar|salir|espant|ocult|esper|rend|respet|marcar|guardar|desconectar todo|seguir( de largo| el cauce)?$)",
+            Pattern.CASE_INSENSITIVE);
+
+    /** Quita del texto visible los avisos de pérdida de salud, para que el daño sea una sorpresa. */
+    private static String ocultarDanio(String opcion) {
+        String s = opcion;
+        s = s.replaceAll("\\s*\\(\\s*[-\\u2212]\\d+\\s+Salud\\s*\\)", "");      // "(-5 Salud)"
+        s = s.replaceAll("\\s*,\\s*[-\\u2212]\\d+\\s+Salud", "");                 // ", -5 Salud"
+        s = s.replaceAll("[-\\u2212]\\d+\\s+Salud\\s*,\\s*", "");                 // "-5 Salud, "
+        return s;
+    }
+
+    /** Resultado inventado para las opciones que no tienen efectos escritos. */
+    private static class Giro {
+        final String texto;
+        int salud, prov, med, mun, def, pts;
+        Giro(String texto) { this.texto = texto; }
+    }
 
     private final String rol;
     private int salud = 100;
@@ -544,7 +572,8 @@ public class Juego {
     }
 
     // =========================================================================
-    // RESOLUCIÓN DE DECISIONES: aplica los efectos escritos en la opción elegida
+    // RESOLUCIÓN DE DECISIONES: aplica los efectos de la opción elegida
+    // (los efectos escritos en el texto, o un giro inventado si no tiene ninguno)
     // =========================================================================
 
     public String resolverDecision(int opcionElegida) {
@@ -553,12 +582,13 @@ public class Juego {
             return "";
         }
 
-        if (opcionElegida < 0 || opcionElegida >= decision.opciones.length) {
-            opcionElegida = decision.opciones.length - 1; // opción inválida = la más prudente
+        if (opcionElegida < 0 || opcionElegida >= decision.reales.length) {
+            opcionElegida = decision.reales.length - 1; // opción inválida = la más prudente
         }
-        String opcion = decision.opciones[opcionElegida];
+        String opcion = decision.reales[opcionElegida]; // texto completo, con todos los efectos
 
         int dSalud = 0, dProv = 0, dMed = 0, dMun = 0, dDef = 0, dPts = 0;
+        String narrativa = null;
 
         // 1) Efectos escritos entre paréntesis en el texto de la opción
         Matcher m = EFECTO.matcher(opcion);
@@ -574,10 +604,18 @@ public class Juego {
             else if (k.startsWith("punto"))     dPts   += v;
         }
 
-        // 2) Opciones cuyo costo está escrito en palabras y no entre paréntesis
+        // 2) Opciones cuyo efecto está escrito en palabras y no entre paréntesis
         switch (decision.tipo) {
-            case 100: // Misión humanitaria: "Enviar 2 Medicinas..."
-                if (opcionElegida == 0) dMed -= 2;
+            case 100: // Misión humanitaria
+                if (opcionElegida == 0) {
+                    dMed -= 2;
+                } else if (opcionElegida == 1) {
+                    dMed -= 1; dPts += 15;
+                    narrativa = "Alcanzas a estabilizar a los más graves, pero no a todos.";
+                } else {
+                    dPts -= 10;
+                    narrativa = "Les das la espalda y el remordimiento te pesa.";
+                }
                 break;
             case 303: // Mercader: "Tratar su infección gastando 1 medicina" (a cambio recibes un botiquín)
                 if (opcionElegida == 0) { dMed += 2; dPts += 10; } // -1 gastada, +3 del botiquín
@@ -591,7 +629,16 @@ public class Juego {
 
         String limpio = opcion.replaceAll("\\s*\\([^)]*\\)", "").trim();
 
-        // 3) Si no alcanzan los recursos para pagar el costo, la opción falla
+        // 3) Si la opción no cambia nada, se inventa algo que pase
+        boolean sinEfecto = dSalud == 0 && dProv == 0 && dMed == 0 && dMun == 0 && dDef == 0 && dPts == 0;
+        if (sinEfecto) {
+            Giro g = inventarGiro(PRUDENTE.matcher(limpio).find());
+            dSalud = g.salud; dProv = g.prov; dMed = g.med;
+            dMun = g.mun; dDef = g.def; dPts = g.pts;
+            narrativa = g.texto;
+        }
+
+        // 4) Si no alcanzan los recursos para pagar el costo, la opción falla
         if (provisiones + dProv < 0 || medicinas + dMed < 0 || municion + dMun < 0) {
             registrar("No tienes los recursos necesarios para: " + limpio + ". La oportunidad se pierde.",
                     "Intentó \"" + limpio + "\" sin tener los recursos necesarios.");
@@ -599,7 +646,7 @@ public class Juego {
             return log.toString();
         }
 
-        // 4) Aplicar los efectos con sus límites
+        // 5) Aplicar los efectos con sus límites
         salud = Math.max(0, Math.min(100, salud + dSalud));
         provisiones += dProv;
         medicinas += dMed;
@@ -607,7 +654,7 @@ public class Juego {
         defensa = Math.max(0, Math.min(3, defensa + dDef));
         puntuacion = Math.max(0, puntuacion + dPts);
 
-        // 5) Mensaje y diario
+        // 6) Mensaje y diario
         StringBuilder efectos = new StringBuilder();
         agregarEfecto(efectos, dSalud, "Salud");
         agregarEfecto(efectos, dProv, "Provisiones");
@@ -616,16 +663,96 @@ public class Juego {
         agregarEfecto(efectos, dDef, "Defensa");
         agregarEfecto(efectos, dPts, "Puntos");
 
-        if (efectos.length() == 0) {
-            registrar("Elegiste: " + limpio + ".\nNo pasó nada relevante.",
-                    limpio + " (sin consecuencias).");
-        } else {
-            registrar("Elegiste: " + limpio + ".\nResultado: " + efectos + ".",
-                    limpio + " (" + efectos + ").");
-        }
+        String pantalla = "Elegiste: " + limpio + ".";
+        if (narrativa != null) pantalla += "\n" + narrativa;
+        if (efectos.length() > 0) pantalla += "\nResultado: " + efectos + ".";
 
+        String resumen = limpio;
+        if (narrativa != null) resumen += " — " + narrativa;
+        if (efectos.length() > 0) resumen += " (" + efectos + ")";
+
+        registrar(pantalla, resumen);
         decision = null;
         return log.toString();
+    }
+
+    /**
+     * Inventa un resultado para una opción sin efectos escritos.
+     * Las opciones prudentes (ignorar, retirarse...) tienen giros más suaves;
+     * las audaces, más grandes en lo bueno y en lo malo.
+     * El daño crece con los días y la defensa lo reduce. Nunca se avisa de antemano.
+     */
+    private Giro inventarGiro(boolean prudente) {
+        boolean bueno = random.nextInt(100) < (prudente ? 55 : 50);
+        Giro g;
+
+        if (prudente && bueno) {
+            switch (random.nextInt(5)) {
+                case 0:  g = new Giro("Mientras te alejas, encuentras algo comestible tirado en el camino."); g.prov = 1; break;
+                case 1:  g = new Giro("Entre los escombros brilla una caja de cartuchos olvidada."); g.mun = 1; break;
+                case 2:  g = new Giro("Un botiquín arrugado asoma bajo unos papeles."); g.med = 1; break;
+                case 3:  g = new Giro("Tu cautela te deja observar el lugar y descubrir un atajo seguro."); g.pts = 5; break;
+                default: g = new Giro("Aprovechas la calma para recuperar el aliento."); g.salud = 5; break;
+            }
+        } else if (prudente) {
+            switch (random.nextInt(4)) {
+                case 0:
+                    g = new Giro("Un ruido te sobresalta y tropiezas al retirarte.");
+                    g.salud = -danio(5); break;
+                case 1:
+                    if (provisiones > 0) { g = new Giro("Una rata se cuela en tu mochila y se lleva comida."); g.prov = -1; }
+                    else { g = new Giro("Una rata te muerde la mano mientras te alejas."); g.salud = -danio(5); }
+                    break;
+                case 2:
+                    if (municion > 0) { g = new Giro("Se te cae un cargador por el camino y no lo recuperas."); g.mun = -1; }
+                    else { g = new Giro("Pisas mal y te torcés el tobillo."); g.salud = -danio(5); }
+                    break;
+                default:
+                    g = new Giro("Una rama oculta te corta el brazo.");
+                    g.salud = -danio(5); break;
+            }
+        } else if (bueno) {
+            switch (random.nextInt(5)) {
+                case 0:  g = new Giro("La jugada sale bien y encuentras provisiones extra."); g.prov = 2; break;
+                case 1:  g = new Giro("Tu audacia da resultado: hallas munición escondida."); g.mun = 2; break;
+                case 2:  g = new Giro("Entre el desorden aparece un botiquín sin abrir."); g.med = 1; g.pts = 10; break;
+                case 3:  g = new Giro("Descubres un punto débil y refuerzas el refugio con lo que encuentras."); g.def = 1; break;
+                default: g = new Giro("Todo sale mejor de lo esperado."); g.pts = 15; break;
+            }
+        } else {
+            switch (random.nextInt(4)) {
+                case 0:
+                    g = new Giro("Sales mal parado: algo te golpea en la oscuridad.");
+                    g.salud = -danio(10); break;
+                case 1:
+                    g = new Giro("Un infectado te sorprende y debes huir herido.");
+                    g.salud = -danio(10); break;
+                case 2:
+                    if (provisiones > 0 && municion > 0) {
+                        g = new Giro("En la huida pierdes parte de tu equipo.");
+                        g.prov = -1; g.mun = -1;
+                    } else if (provisiones > 0) {
+                        g = new Giro("En la huida se te cae la mochila y pierdes comida.");
+                        g.prov = -1;
+                    } else if (municion > 0) {
+                        g = new Giro("En la huida pierdes parte de tu munición.");
+                        g.mun = -1;
+                    } else {
+                        g = new Giro("En la huida te llevas un golpe fuerte.");
+                        g.salud = -danio(5);
+                    }
+                    break;
+                default:
+                    g = new Giro("El intento fracasa y pierdes tiempo valioso.");
+                    g.pts = -10; break;
+            }
+        }
+        return g;
+    }
+
+    /** Daño inventado: crece cada 5 días y la defensa lo reduce (mínimo 1). */
+    private int danio(int base) {
+        return Math.max(1, base + ((dias - 1) / 5) * 3 - defensa);
     }
 
     private void agregarEfecto(StringBuilder sb, int delta, String nombre) {
