@@ -9,7 +9,6 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.net.URL;
@@ -40,29 +39,6 @@ import UltimoRef.Juego.Accion;
 
 /** Ventana principal con HUD táctico mejorado usando iconos personalizados y panel lateral. */
 public class Ventanajuego extends JFrame {
-
-    // =========================================================================
-    // [CAMBIO ADAPTABLE 1] ESCALA SEGÚN LA RESOLUCIÓN DE LA PANTALLA
-    // =========================================================================
-
-    // Resolución útil de la pantalla (sin barra de tareas)
-    private static final Rectangle PANTALLA =
-        GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-
-    // Escala respecto de un diseño base de 1920x1080
-    private static final double ESCALA =
-        Math.max(0.5, Math.min(PANTALLA.width / 1920.0, PANTALLA.height / 1080.0));
-
-    /** Convierte un tamaño base (pensado para 1920x1080) al de la pantalla actual. */
-    private static int px(int base) {
-        return Math.max(1, (int) Math.round(base * ESCALA));
-    }
-
-    /** Ancho del panel lateral: 14% de la pantalla (mínimo 150 px). */
-    private static int anchoLateral() {
-        return Math.max(150, (int) (PANTALLA.width * 0.14));
-    }
-    // ===== FIN CAMBIO ADAPTABLE 1 =====
 
     // PALETA DE COLORES Y ESTÉTICA APOCALÍPTICA
 
@@ -163,7 +139,7 @@ public class Ventanajuego extends JFrame {
         lblSaludIcono.setFont(new Font("SansSerif", Font.BOLD, 12));
 
         barraSalud.setStringPainted(true);
-        barraSalud.setPreferredSize(new Dimension(px(160), px(22)));
+        barraSalud.setPreferredSize(new Dimension(160, 22));
         barraSalud.setFont(new Font("SansSerif", Font.BOLD, 11));
         barraSalud.setBackground(new Color(25, 15, 15));
         barraSalud.setBorder(BorderFactory.createLineBorder(new Color(80, 40, 40), 1));
@@ -210,9 +186,7 @@ public class Ventanajuego extends JFrame {
 
         // Configuración del Panel Lateral
         panelLateral.setBackground(new Color(14, 20, 14));
-        // ===== [CAMBIO ADAPTABLE 2] ancho del panel lateral según pantalla =====
-        panelLateral.setPreferredSize(new Dimension(anchoLateral(), 0));
-        // ===== FIN CAMBIO ADAPTABLE 2 =====
+        panelLateral.setPreferredSize(new Dimension(180, 0));
         panelLateral.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(50, 80, 50), 2),
             BorderFactory.createEmptyBorder(10, 8, 10, 8)
@@ -409,51 +383,12 @@ public class Ventanajuego extends JFrame {
 
     // IMÁGENES: se leen y escalan UNA vez
 
-    // ===== [CAMBIO ADAPTABLE 3] precarga de imágenes proporcional a la pantalla =====
     private void precargarImagenes() {
-
-        // Tarjetas de selección de rol: ~36% del ancho y ~40% del alto de la pantalla
-        int maxAnchoTarjeta = (int) (PANTALLA.width * 0.36);
-        int maxAltoTarjeta = (int) (PANTALLA.height * 0.40);
-
-        iconoMedicoTarjeta = cargarIconoAjustado("/UltimoRef/img/Medicoo.png",
-                maxAnchoTarjeta, maxAltoTarjeta);
-        iconoSobrevivienteTarjeta = cargarIconoAjustado("/UltimoRef/img/superviviente.png",
-                maxAnchoTarjeta, maxAltoTarjeta);
-
-        // Panel lateral: se ajusta al ancho del panel
-        int maxAnchoLateral = anchoLateral() - 20;
-        int maxAltoLateral = (int) (PANTALLA.height * 0.35);
-
-        iconoMedicoLateral = cargarIconoAjustado("/UltimoRef/img/Medicoo.png",
-                maxAnchoLateral, maxAltoLateral);
-        iconoSobrevivienteLateral = cargarIconoAjustado("/UltimoRef/img/superviviente.png",
-                maxAnchoLateral, maxAltoLateral);
+        iconoMedicoTarjeta = cargarIcono("/UltimoRef/img/Medicoo.png", 800, 530);
+        iconoSobrevivienteTarjeta = cargarIcono("/UltimoRef/img/superviviente.png", 750, 530);
+        iconoMedicoLateral = cargarIcono("/UltimoRef/img/Medicoo.png", 550, 400);
+        iconoSobrevivienteLateral = cargarIcono("/UltimoRef/img/superviviente.png", 550, 400);
     }
-
-    /** Escala la imagen para que entre en maxAncho x maxAlto, manteniendo la proporción. */
-    private ImageIcon cargarIconoAjustado(String ruta, int maxAncho, int maxAlto) {
-        try {
-            URL url = getClass().getResource(ruta);
-            if (url == null) {
-                return null;
-            }
-            BufferedImage original = ImageIO.read(url);
-            if (original == null) {
-                return null;
-            }
-
-            double f = Math.min((double) maxAncho / original.getWidth(),
-                                (double) maxAlto / original.getHeight());
-            int w = Math.max(1, (int) Math.round(original.getWidth() * f));
-            int h = Math.max(1, (int) Math.round(original.getHeight() * f));
-
-            return cargarIcono(ruta, w, h);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-    // ===== FIN CAMBIO ADAPTABLE 3 =====
 
     /** Lee y escala una imagen de forma inmediata (sin carga diferida). */
     private ImageIcon cargarIcono(String ruta, int ancho, int alto) {
@@ -526,13 +461,11 @@ public class Ventanajuego extends JFrame {
 
     // BOTÓN CON IMAGEN DEL LIBRO: ABRIR EL DIARIO DE SUPERVIVENCIA
 
-    private JButton crearBotonDiario() {
+       private JButton crearBotonDiario() {
 
         JButton btnDiario = new JButton();
 
-        // ===== [CAMBIO ADAPTABLE 4] icono del diario adaptable =====
-        ImageIcon icono = cargarIconoAjustado("/UltimoRef/img/diario.png", px(180), px(140));
-        // ===== FIN CAMBIO ADAPTABLE 4 =====
+        ImageIcon icono = cargarIcono("/UltimoRef/img/diario.png", 180, 140);
 
         // Versión con brillo para el efecto hover (se crea una sola vez)
         final ImageIcon iconoHover = crearIconoBrillante(icono);
@@ -611,14 +544,14 @@ public class Ventanajuego extends JFrame {
 
         return new ImageIcon(salida);
     }
-
+    
     // VENTANA QUE MUESTRA LO QUE FUE SUCEDIENDO DÍA A DÍA
 
     private void mostrarDiario() {
 
         JDialog dialogDiario = new JDialog(this, "DIARIO DE SUPERVIVENCIA", true);
         dialogDiario.setLayout(new BorderLayout(10, 10));
-        dialogDiario.setSize(px(650), px(520));
+        dialogDiario.setSize(650, 520);
         dialogDiario.setLocationRelativeTo(this);
 
         JPanel panelDiario = new JPanel(new BorderLayout(10, 10));
@@ -750,9 +683,7 @@ public class Ventanajuego extends JFrame {
         l.setForeground(colorTexto);
         l.setFont(new Font("SansSerif", Font.BOLD, 13));
 
-        // ===== [CAMBIO ADAPTABLE 5] iconos del HUD adaptables =====
-        ImageIcon icono = cargarIcono(rutaRelativa, px(18), px(18));
-        // ===== FIN CAMBIO ADAPTABLE 5 =====
+        ImageIcon icono = cargarIcono(rutaRelativa, 18, 18);
         if (icono != null) {
             l.setIcon(icono);
         }
@@ -763,9 +694,7 @@ public class Ventanajuego extends JFrame {
     private JLabel crearLabelIconoTexto(String rutaRelativa, String texto) {
         JLabel l = new JLabel(texto);
 
-        // ===== [CAMBIO ADAPTABLE 6] =====
-        ImageIcon icono = cargarIcono(rutaRelativa, px(16), px(16));
-        // ===== FIN CAMBIO ADAPTABLE 6 =====
+        ImageIcon icono = cargarIcono(rutaRelativa, 16, 16);
         if (icono != null) {
             l.setIcon(icono);
         }
@@ -851,7 +780,7 @@ public class Ventanajuego extends JFrame {
 
         panelMedico.add(lblMedicoDesc, BorderLayout.CENTER);
 
-        JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
+              JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
         btnMedico.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnMedico.setBackground(new Color(25, 70, 120));
         btnMedico.setForeground(Color.WHITE);
@@ -881,7 +810,7 @@ public class Ventanajuego extends JFrame {
             seleccionRol[0] = 0;
             dialogRol.dispose();
         });
-
+        
         panelMedico.add(btnMedico, BorderLayout.SOUTH);
 
         // TARJETA 2: SOBREVIVIENTE
@@ -912,7 +841,7 @@ public class Ventanajuego extends JFrame {
 
         panelSobreviviente.add(lblSobrevivienteDesc, BorderLayout.CENTER);
 
-        JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
+               JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
         btnSobreviviente.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSobreviviente.setBackground(new Color(160, 60, 20));
         btnSobreviviente.setForeground(Color.WHITE);
@@ -1121,7 +1050,7 @@ public class Ventanajuego extends JFrame {
 
         JDialog dialog = new JDialog(this, "¡DECISIÓN CRÍTICA!", true);
         dialog.setLayout(new BorderLayout());
-        dialog.setSize(px(540), px(380));
+        dialog.setSize(540, 380);
         dialog.setLocationRelativeTo(this);
 
         JPanel panelPrincipal = new JPanel(new BorderLayout(15, 15));
@@ -1173,7 +1102,7 @@ public class Ventanajuego extends JFrame {
 
         JDialog dialogInforme = new JDialog(this, "INFORME DE RESULTADOS", true);
         dialogInforme.setLayout(new BorderLayout());
-        dialogInforme.setSize(px(480), px(260));
+        dialogInforme.setSize(480, 260);
         dialogInforme.setLocationRelativeTo(this);
 
         JPanel panelInforme = new JPanel(new BorderLayout(15, 15));
@@ -1394,14 +1323,14 @@ public class Ventanajuego extends JFrame {
         btnReiniciar.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnReiniciar.setBackground(new Color(40, 90, 50));
         btnReiniciar.setForeground(Color.WHITE);
-        btnReiniciar.setPreferredSize(new Dimension(px(220), px(45)));
+        btnReiniciar.setPreferredSize(new Dimension(220, 45));
         btnReiniciar.setFocusPainted(false);
 
         JButton btnSalir = new JButton("SALIR DEL JUEGO");
         btnSalir.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSalir.setBackground(new Color(120, 40, 40));
         btnSalir.setForeground(Color.WHITE);
-        btnSalir.setPreferredSize(new Dimension(px(220), px(45)));
+        btnSalir.setPreferredSize(new Dimension(220, 45));
         btnSalir.setFocusPainted(false);
 
         final int[] opcionFin = {-1};
@@ -1422,7 +1351,7 @@ public class Ventanajuego extends JFrame {
         btnRankingFin.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnRankingFin.setBackground(new Color(120, 90, 20));
         btnRankingFin.setForeground(Color.WHITE);
-        btnRankingFin.setPreferredSize(new Dimension(px(220), px(45)));
+        btnRankingFin.setPreferredSize(new Dimension(220, 45));
         btnRankingFin.setFocusPainted(false);
         btnRankingFin.addActionListener(e -> new PantallaRanking(dialogFin));
         // ===== FIN CAMBIO RANKING 3 =====
