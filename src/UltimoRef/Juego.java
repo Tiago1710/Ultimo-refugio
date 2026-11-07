@@ -3,6 +3,8 @@ package UltimoRef;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Lógica completa con 10 eventos únicos por lugar para Médicos y Sobrevivientes. */
 public class Juego {
@@ -20,6 +22,14 @@ public class Juego {
             this.opciones = opciones;
         }
     }
+
+    /**
+     * Detecta los efectos escritos en el texto de cada opción, por ejemplo
+     * "(-1 Medicina, +25 Puntos)" o "(+2 Provisiones)". Solo cuentan los números con signo.
+     */
+    private static final Pattern EFECTO = Pattern.compile(
+            "([+\\-\\u2212])\\s*(\\d+)\\s+(Salud|Provisi[oó]n(?:es)?|Medicinas?|Munici[oó]n(?:es)?|Defensa|Puntos?)",
+            Pattern.CASE_INSENSITIVE);
 
     private final String rol;
     private int salud = 100;
@@ -276,7 +286,7 @@ public class Juego {
                     if (subEvento == 0) {
                         decision = new Decision(301, "En el sector de detención médica hay un recluso con notas sobre antídotos.", "Examinar los apuntes con detenimiento (+15 Puntos)", "Registrar su celda en busca de analgésicos (+1 Medicina)", "Retirarte");
                     } else if (subEvento == 1) {
-                        decision = new Decision(317, "El botiquín de primeros auxilios tácticos de la policía está intacto pero con clave.", "Dedalear la combinación analizando patrones numéricos (+2 Medicinas)", "Forzar el maletín con un bisturí (-5 Salud, +1 Medicina)", "Abandonarlo");
+                        decision = new Decision(317, "El botiquín de primeros auxilios tácticos de la policía está intacto pero con clave.", "Tantear la combinación analizando patrones numéricos (+2 Medicinas)", "Forzar el maletín con un bisturí (-5 Salud, +1 Medicina)", "Abandonarlo");
                     } else if (subEvento == 2) {
                         decision = new Decision(332, "En la oficina del médico forense policial hay viales de suero antitetánico.", "Recuperar los viales de la morgue policial (+2 Medicinas)", "Investigar bitácoras de autopsias de infectados (+15 Puntos)", "Cerrar con llave");
                     } else if (subEvento == 3) {
@@ -382,7 +392,7 @@ public class Juego {
                     if (subEvento == 0) {
                         decision = new Decision(410, "Un grupo de saqueadores armados ha montado barricadas en la casa principal de la granja.", "Atacarlos por sorpresa desde los maizales (-1 Munición, +3 Provisiones)", "Infiltrarte sigilosamente por la noche (+1 Provisión)", "Retirarte sin hacer ruido");
                     } else if (subEvento == 1) {
-                        decision = new Decision(411, "Un tractor abandonado bloquea el camino; aún le queda combustible.", "Sifunar el estanque para extraer combustible útil (+2 Provisiones)", "Desarmar la batería para piezas eléctricas (+1 Munición)", "Dejar el tractor en paz");
+                        decision = new Decision(411, "Un tractor abandonado bloquea el camino; aún le queda combustible.", "Sifonar el estanque para extraer combustible útil (+2 Provisiones)", "Desarmar la batería para piezas eléctricas (+1 Munición)", "Dejar el tractor en paz");
                     } else if (subEvento == 2) {
                         decision = new Decision(412, "Una jauría de perros salvajes infectados rodea el silo de grano.", "Combatirlos cuerpo a cuerpo con machete (-10 Salud, +2 Provisiones)", "Usar munición para abatir líderes (-1 Munición)", "Trepar a lo alto del silo");
                     } else if (subEvento == 3) {
@@ -432,7 +442,7 @@ public class Juego {
                     } else if (subEvento == 1) {
                         decision = new Decision(416, "En la azotea del hospital hay un campamento de francotiradores abandonado.", "Asegurar la posición elevada ganando ventaja táctica (+1 Munición, +1 Provisiones)", "Desmantelar apostadero", "Bajar inmediatamente");
                     } else if (subEvento == 2) {
-                        decision = new Decision(433, "El sótano de caldera del hospital tiene bidones de combustible diésel.", "Trasladar combustible al refugio (-5 Salud, +3 Provisiones)", "Sifunar una pequeña cantidad", "Dejarlo ahí");
+                        decision = new Decision(433, "El sótano de caldera del hospital tiene bidones de combustible diésel.", "Trasladar combustible al refugio (-5 Salud, +3 Provisiones)", "Sifonar una pequeña cantidad", "Dejarlo ahí");
                     } else if (subEvento == 3) {
                         decision = new Decision(434, "Una ambulancia blindada del S.W.A.T. está estacionada en la rampa de urgencias.", "Forzar el panel de armas de la ambulancia (+2 Munición)", "Revisar equipo de radio", "Descartar");
                     } else if (subEvento == 4) {
@@ -470,7 +480,7 @@ public class Juego {
                     } else if (subEvento == 8) {
                         decision = new Decision(447, "Un puente colgante de madera cruza un abismo profundo en el bosque.", "Cruzar con extremo cuidado equilibrando tu carga (+15 Puntos)", "Buscar un cruce alternativo por el río", "Dar la vuelta");
                     } else {
-                        decision = new Decision(448, "Restos de un automóvil civil volcado en un sendero forestal.", "Revisar la guantera y el baúl buscando herramientas (+1 Munición)", "Safar baterías", "Ignorar");
+                        decision = new Decision(448, "Restos de un automóvil civil volcado en un sendero forestal.", "Revisar la guantera y el baúl buscando herramientas (+1 Munición)", "Sacar baterías", "Ignorar");
                     }
                     break;
 
@@ -490,7 +500,7 @@ public class Juego {
                     } else if (subEvento == 6) {
                         decision = new Decision(453, "Un camión de reparto de panificados está estacionado en la puerta trasera.", "Revisar los compartimentos buscando pan y embutidos sellados (+2 Provisiones)", "Sustraer baterías del camión", "Ignorar");
                     } else if (subEvento == 7) {
-                        decision = new Decision(454, "Encuentras un maletín de herramientas de cerrajería olvidado en un mostrador.", "Apropiarte del kit de ganzúas para abrir puertas bloqueadas (+1 Puntos)", "Dejarlo", "Venderlo mentalmente");
+                        decision = new Decision(454, "Encuentras un maletín de herramientas de cerrajería olvidado en un mostrador.", "Apropiarte del kit de ganzúas para abrir puertas bloqueadas (+1 Punto)", "Dejarlo", "Examinarlo sin llevártelo");
                     } else if (subEvento == 8) {
                         decision = new Decision(455, "Una sección de electrónica conserva linternas de dinamo y baterías solares.", "Equiparte con una linterna solar de carga manual (+1 Defensa)", "Desarmar aparatos", "Pasar de largo");
                     } else {
@@ -533,36 +543,95 @@ public class Juego {
         return decision;
     }
 
+    // =========================================================================
+    // RESOLUCIÓN DE DECISIONES: aplica los efectos escritos en la opción elegida
+    // =========================================================================
+
     public String resolverDecision(int opcionElegida) {
         log = new StringBuilder();
         if (decision == null) {
             return "";
         }
-        
+
+        if (opcionElegida < 0 || opcionElegida >= decision.opciones.length) {
+            opcionElegida = decision.opciones.length - 1; // opción inválida = la más prudente
+        }
+        String opcion = decision.opciones[opcionElegida];
+
+        int dSalud = 0, dProv = 0, dMed = 0, dMun = 0, dDef = 0, dPts = 0;
+
+        // 1) Efectos escritos entre paréntesis en el texto de la opción
+        Matcher m = EFECTO.matcher(opcion);
+        while (m.find()) {
+            int v = Integer.parseInt(m.group(2));
+            if (!m.group(1).equals("+")) v = -v;
+            String k = m.group(3).toLowerCase();
+            if (k.startsWith("salud"))          dSalud += v;
+            else if (k.startsWith("provis"))    dProv  += v;
+            else if (k.startsWith("medicin"))   dMed   += v;
+            else if (k.startsWith("munici"))    dMun   += v;
+            else if (k.startsWith("defensa"))   dDef   += v;
+            else if (k.startsWith("punto"))     dPts   += v;
+        }
+
+        // 2) Opciones cuyo costo está escrito en palabras y no entre paréntesis
         switch (decision.tipo) {
-            // Resoluciones generales y específicas
-            case 310: case 410:
-                if (opcionElegida == 0) { provisiones += 3; puntuacion += 25; registrar("Resolviste el enfrentamiento en la granja con éxito (+3 Provisiones).", "Combate en granja."); }
-                else { salud -= 15; registrar("La situación salió mal y sufriste daños (-15 Salud).", "Conflicto en granja."); }
+            case 100: // Misión humanitaria: "Enviar 2 Medicinas..."
+                if (opcionElegida == 0) dMed -= 2;
                 break;
-            case 300: case 400: case 200:
-                municion += 3; medicinas += 2; puntuacion += 30;
-                registrar("¡Operación exitosa! Obtuviste valiosos suministros.", "Completó incursión táctica.");
+            case 303: // Mercader: "Tratar su infección gastando 1 medicina" (a cambio recibes un botiquín)
+                if (opcionElegida == 0) { dMed += 2; dPts += 10; } // -1 gastada, +3 del botiquín
+                break;
+            case 350: // Trueque: "Intercambiar 1 provisión por 2 medicinas"
+                if (opcionElegida == 0) { dProv -= 1; dMed += 2; }
                 break;
             default:
-                if (opcionElegida == 0) {
-                    puntuacion += 15; provisiones += 1;
-                    registrar("Tomaste la opción más audaz obteniendo buenos resultados (+1 Provisión, +15 Puntos).", "Decisión audaz tomada.");
-                } else if (opcionElegida == 1) {
-                    salud -= 10;
-                    registrar("La decisión tuvo un costo físico inesperado (-10 Salud).", "Decisión con costo físico.");
-                } else {
-                    registrar("Optaste por la prudencia evitando riesgos innecesarios.", "Decisión prudente.");
-                }
                 break;
         }
+
+        String limpio = opcion.replaceAll("\\s*\\([^)]*\\)", "").trim();
+
+        // 3) Si no alcanzan los recursos para pagar el costo, la opción falla
+        if (provisiones + dProv < 0 || medicinas + dMed < 0 || municion + dMun < 0) {
+            registrar("No tienes los recursos necesarios para: " + limpio + ". La oportunidad se pierde.",
+                    "Intentó \"" + limpio + "\" sin tener los recursos necesarios.");
+            decision = null;
+            return log.toString();
+        }
+
+        // 4) Aplicar los efectos con sus límites
+        salud = Math.max(0, Math.min(100, salud + dSalud));
+        provisiones += dProv;
+        medicinas += dMed;
+        municion += dMun;
+        defensa = Math.max(0, Math.min(3, defensa + dDef));
+        puntuacion = Math.max(0, puntuacion + dPts);
+
+        // 5) Mensaje y diario
+        StringBuilder efectos = new StringBuilder();
+        agregarEfecto(efectos, dSalud, "Salud");
+        agregarEfecto(efectos, dProv, "Provisiones");
+        agregarEfecto(efectos, dMed, "Medicinas");
+        agregarEfecto(efectos, dMun, "Munición");
+        agregarEfecto(efectos, dDef, "Defensa");
+        agregarEfecto(efectos, dPts, "Puntos");
+
+        if (efectos.length() == 0) {
+            registrar("Elegiste: " + limpio + ".\nNo pasó nada relevante.",
+                    limpio + " (sin consecuencias).");
+        } else {
+            registrar("Elegiste: " + limpio + ".\nResultado: " + efectos + ".",
+                    limpio + " (" + efectos + ").");
+        }
+
         decision = null;
         return log.toString();
+    }
+
+    private void agregarEfecto(StringBuilder sb, int delta, String nombre) {
+        if (delta == 0) return;
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(delta > 0 ? "+" : "").append(delta).append(" ").append(nombre);
     }
 
     public String getRol()                  { return rol; }
