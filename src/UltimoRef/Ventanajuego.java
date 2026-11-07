@@ -377,16 +377,21 @@ public class Ventanajuego extends JFrame {
 
     // BOTÓN CON IMAGEN DEL LIBRO: ABRIR EL DIARIO DE SUPERVIVENCIA
 
-    private JButton crearBotonDiario() {
+       private JButton crearBotonDiario() {
 
         JButton btnDiario = new JButton();
 
         ImageIcon icono = cargarIcono("/UltimoRef/img/diario.png", 180, 140);
 
+        // Versión con brillo para el efecto hover (se crea una sola vez)
+        final ImageIcon iconoHover = crearIconoBrillante(icono);
+
         if (icono != null) {
             btnDiario.setIcon(icono);
         } else {
             btnDiario.setText("📖 DIARIO");
+            btnDiario.setForeground(new Color(232, 211, 165));
+            btnDiario.setFont(new Font("SansSerif", Font.BOLD, 14));
         }
 
         btnDiario.setBorderPainted(false);
@@ -394,12 +399,68 @@ public class Ventanajuego extends JFrame {
         btnDiario.setFocusPainted(false);
         btnDiario.setOpaque(false);
         btnDiario.setToolTipText("Abrir diario de supervivencia");
+        btnDiario.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        // Efecto al pasar el mouse por encima
+        btnDiario.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (iconoHover != null) {
+                    btnDiario.setIcon(iconoHover);
+                } else {
+                    btnDiario.setForeground(Color.WHITE);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (icono != null) {
+                    btnDiario.setIcon(icono);
+                } else {
+                    btnDiario.setForeground(new Color(232, 211, 165));
+                }
+            }
+        });
 
         btnDiario.addActionListener(e -> mostrarDiario());
 
         return btnDiario;
     }
 
+    /** Crea una copia del ícono con un resplandor dorado y más luminosa. */
+    private ImageIcon crearIconoBrillante(ImageIcon original) {
+
+        if (original == null) {
+            return null;
+        }
+
+        int ancho = original.getIconWidth();
+        int alto = original.getIconHeight();
+
+        java.awt.image.BufferedImage salida = new java.awt.image.BufferedImage(
+            ancho, alto, java.awt.image.BufferedImage.TYPE_INT_ARGB
+        );
+
+        Graphics2D g2 = salida.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Resplandor dorado de fondo
+        g2.setColor(new Color(255, 215, 120, 60));
+        g2.fillRoundRect(0, 0, ancho, alto, 150, 150);
+
+        // Imagen original encima
+        g2.drawImage(original.getImage(), 0, 0, null);
+
+        // Aclarado suave sobre la imagen (solo sobre píxeles visibles)
+        g2.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_ATOP, 0.25f));
+        g2.setColor(Color.WHITE);
+        g2.fillRect(0, 0, ancho, alto);
+
+        g2.dispose();
+
+        return new ImageIcon(salida);
+    }
+    
     // VENTANA QUE MUESTRA LO QUE FUE SUCEDIENDO DÍA A DÍA
 
     private void mostrarDiario() {
@@ -622,18 +683,37 @@ public class Ventanajuego extends JFrame {
 
         panelMedico.add(lblMedicoDesc, BorderLayout.CENTER);
 
-        JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
+              JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
         btnMedico.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnMedico.setBackground(new Color(25, 70, 120));
         btnMedico.setForeground(Color.WHITE);
         btnMedico.setFocusPainted(false);
         btnMedico.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
+        btnMedico.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        // Efecto al pasar el mouse por encima
+        btnMedico.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnMedico.setBackground(new Color(45, 110, 175));
+                btnMedico.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(130, 200, 255), 2),
+                    BorderFactory.createEmptyBorder(10, 8, 10, 8)
+                ));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnMedico.setBackground(new Color(25, 70, 120));
+                btnMedico.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
+            }
+        });
 
         btnMedico.addActionListener(e -> {
             seleccionRol[0] = 0;
             dialogRol.dispose();
         });
-
+        
         panelMedico.add(btnMedico, BorderLayout.SOUTH);
 
         // TARJETA 2: SOBREVIVIENTE
@@ -664,12 +744,31 @@ public class Ventanajuego extends JFrame {
 
         panelSobreviviente.add(lblSobrevivienteDesc, BorderLayout.CENTER);
 
-        JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
+               JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
         btnSobreviviente.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSobreviviente.setBackground(new Color(160, 60, 20));
         btnSobreviviente.setForeground(Color.WHITE);
         btnSobreviviente.setFocusPainted(false);
         btnSobreviviente.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
+        btnSobreviviente.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        // Efecto al pasar el mouse por encima
+        btnSobreviviente.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnSobreviviente.setBackground(new Color(210, 90, 35));
+                btnSobreviviente.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(255, 190, 100), 2),
+                    BorderFactory.createEmptyBorder(10, 8, 10, 8)
+                ));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnSobreviviente.setBackground(new Color(160, 60, 20));
+                btnSobreviviente.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
+            }
+        });
 
         btnSobreviviente.addActionListener(e -> {
             seleccionRol[0] = 1;
