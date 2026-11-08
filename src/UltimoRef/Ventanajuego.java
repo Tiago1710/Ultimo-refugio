@@ -544,77 +544,169 @@ public class Ventanajuego extends JFrame {
 
         return new ImageIcon(salida);
     }
-    
-    // VENTANA QUE MUESTRA LO QUE FUE SUCEDIENDO DÍA A DÍA
+
+    // =========================================================================
+    // [CAMBIO DIARIO] VENTANA DEL DIARIO: LIBRO ABIERTO (libro.png) CON EL TEXTO
+    // ADENTRO DE LAS HOJAS. Página izquierda y derecha, con scroll si hace falta.
+    // =========================================================================
 
     private void mostrarDiario() {
 
+        // --- Cargar la imagen del libro y calcular su tamaño en pantalla ---
+        BufferedImage libroOriginal = null;
+        try {
+            URL urlLibro = getClass().getResource("/UltimoRef/img/libro.png");
+            if (urlLibro != null) {
+                libroOriginal = ImageIO.read(urlLibro);
+            }
+        } catch (Exception ex) {
+            libroOriginal = null;
+        }
+
+        // Alto máximo del libro: el 80% de la pantalla útil (con tope de 760 px)
+        int altoPantalla = GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .getMaximumWindowBounds().height;
+        int altoLibro = Math.min(760, (int) (altoPantalla * 0.80));
+        int anchoLibro = (int) (altoLibro * 4.0 / 3.0); // proporción por defecto
+
+        if (libroOriginal != null) {
+            anchoLibro = (int) Math.round(
+                libroOriginal.getWidth() * (altoLibro / (double) libroOriginal.getHeight())
+            );
+        }
+
+        final ImageIcon iconoLibro = (libroOriginal != null)
+            ? cargarIcono("/UltimoRef/img/libro.png", anchoLibro, altoLibro)
+            : null;
+
+        final int anchoFinal = anchoLibro;
+        final int altoFinal = altoLibro;
+
+        // --- Diálogo sin bordes y transparente: se ve solo el libro ---
         JDialog dialogDiario = new JDialog(this, "DIARIO DE SUPERVIVENCIA", true);
-        dialogDiario.setLayout(new BorderLayout(10, 10));
-        dialogDiario.setSize(650, 520);
-        dialogDiario.setLocationRelativeTo(this);
+        dialogDiario.setUndecorated(true);
+        dialogDiario.setBackground(new Color(0, 0, 0, 0));
+        dialogDiario.setLayout(new BorderLayout());
 
-        JPanel panelDiario = new JPanel(new BorderLayout(10, 10));
-        panelDiario.setBackground(new Color(32, 25, 18));
-        panelDiario.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(150, 110, 60), 3),
-            BorderFactory.createEmptyBorder(18, 20, 18, 20)
-        ));
+        // Panel que dibuja el libro de fondo y tiene las dos hojas encima
+        JPanel panelLibro = new JPanel(null) {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                super.paintComponent(g);
+                if (iconoLibro != null) {
+                    g.drawImage(iconoLibro.getImage(), 0, 0, null);
+                } else {
+                    // Respaldo si no se encuentra libro.png
+                    g.setColor(new Color(110, 70, 40));
+                    g.fillRoundRect(0, 0, getWidth(), getHeight(), 40, 40);
+                    g.setColor(new Color(238, 226, 196));
+                    g.fillRect((int) (getWidth() * 0.11), (int) (getHeight() * 0.16),
+                        (int) (getWidth() * 0.78), (int) (getHeight() * 0.62));
+                }
+            }
+        };
+        panelLibro.setOpaque(false);
+        panelLibro.setPreferredSize(new Dimension(anchoFinal, altoFinal));
 
-        JLabel titulo = new JLabel(
-            "<html><div style='text-align:center;'>"
-            + "<h1 style='color:#E8D3A5; margin:0;'>DIARIO DE SUPERVIVENCIA</h1>"
-            + "<p style='color:#BDA77D;'>Las anotaciones de todo lo que ocurrió durante tu viaje</p>"
-            + "</div></html>",
-            JLabel.CENTER
-        );
-        panelDiario.add(titulo, BorderLayout.NORTH);
+        // --- Contenido del diario, repartido en dos hojas ---
+        StringBuilder izquierda = new StringBuilder();
+        StringBuilder derecha = new StringBuilder();
 
-        JTextArea areaDiario = new JTextArea();
-        areaDiario.setEditable(false);
-        areaDiario.setLineWrap(true);
-        areaDiario.setWrapStyleWord(true);
-        areaDiario.setBackground(new Color(238, 226, 196));
-        areaDiario.setForeground(new Color(55, 43, 29));
-        areaDiario.setFont(new Font("Serif", Font.PLAIN, 16));
-        areaDiario.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        izquierda.append("DIARIO DE SUPERVIVENCIA\n");
+        izquierda.append("Personaje: ").append(juego.getRol()).append("\n");
+        izquierda.append("Día actual: ").append(juego.getDias()).append("\n");
+        izquierda.append("------------------------------\n\n");
 
-        StringBuilder contenido = new StringBuilder();
-        contenido.append("PERSONAJE: ").append(juego.getRol()).append("\n");
-        contenido.append("DÍA ACTUAL: ").append(juego.getDias()).append("\n");
-        contenido.append("==============================================\n\n");
+        java.util.List<String> entradas = juego.getDiario();
 
-        if (juego.getDiario().isEmpty()) {
-            contenido.append("Todavía no hay anotaciones.\n");
-            contenido.append("Tus experiencias aparecerán aquí a medida que avances cada día.");
+        if (entradas.isEmpty()) {
+            izquierda.append("Todavía no hay anotaciones.\n\n");
+            izquierda.append("Tus experiencias aparecerán aquí a medida que avances cada día.");
         } else {
-            for (String entrada : juego.getDiario()) {
-                contenido.append("• ").append(entrada).append("\n\n");
+            int mitad = (entradas.size() + 1) / 2;
+            for (int i = 0; i < entradas.size(); i++) {
+                StringBuilder destino = (i < mitad) ? izquierda : derecha;
+                destino.append("• ").append(entradas.get(i)).append("\n\n");
             }
         }
 
-        areaDiario.setText(contenido.toString());
-        areaDiario.setCaretPosition(0);
+        // Tamaño de letra proporcional al libro
+        int tamLetra = Math.max(12, altoFinal / 44);
+        Font fuentePagina = new Font("Serif", Font.PLAIN, tamLetra);
+        Color colorTinta = new Color(55, 43, 29);
 
-        JScrollPane scrollDiario = new JScrollPane(areaDiario);
-        scrollDiario.setBorder(BorderFactory.createLineBorder(new Color(150, 110, 60), 2));
-        panelDiario.add(scrollDiario, BorderLayout.CENTER);
+        // Zonas de las hojas (en fracciones del tamaño de la imagen)
+        JScrollPane hojaIzq = crearHojaDiario(izquierda.toString(), fuentePagina, colorTinta);
+        hojaIzq.setBounds(
+            (int) (anchoFinal * 0.125), (int) (altoFinal * 0.19),
+            (int) (anchoFinal * 0.345), (int) (altoFinal * 0.55)
+        );
 
+        JScrollPane hojaDer = crearHojaDiario(derecha.toString(), fuentePagina, colorTinta);
+        hojaDer.setBounds(
+            (int) (anchoFinal * 0.545), (int) (altoFinal * 0.19),
+            (int) (anchoFinal * 0.335), (int) (altoFinal * 0.55)
+        );
+
+        panelLibro.add(hojaIzq);
+        panelLibro.add(hojaDer);
+
+        // --- Botón de cerrar (debajo del libro) ---
         JButton btnCerrar = new JButton("CERRAR DIARIO");
         btnCerrar.setFont(new Font("SansSerif", Font.BOLD, 12));
         btnCerrar.setBackground(new Color(75, 55, 35));
         btnCerrar.setForeground(Color.WHITE);
         btnCerrar.setFocusPainted(false);
+        btnCerrar.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(150, 110, 60), 2),
+            BorderFactory.createEmptyBorder(8, 18, 8, 18)
+        ));
+        btnCerrar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btnCerrar.addActionListener(e -> dialogDiario.dispose());
 
-        JPanel panelCerrar = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JPanel panelCerrar = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 6));
         panelCerrar.setOpaque(false);
         panelCerrar.add(btnCerrar);
-        panelDiario.add(panelCerrar, BorderLayout.SOUTH);
 
-        dialogDiario.add(panelDiario);
+        dialogDiario.add(panelLibro, BorderLayout.CENTER);
+        dialogDiario.add(panelCerrar, BorderLayout.SOUTH);
+
+        // Con la tecla ESC también se cierra
+        dialogDiario.getRootPane().registerKeyboardAction(
+            e -> dialogDiario.dispose(),
+            javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        dialogDiario.pack();
+        dialogDiario.setLocationRelativeTo(this);
         dialogDiario.setVisible(true);
     }
+
+    /** Crea una hoja de texto transparente (para poner encima del libro). */
+    private JScrollPane crearHojaDiario(String texto, Font fuente, Color colorTinta) {
+
+        JTextArea area = new JTextArea(texto);
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setOpaque(false);
+        area.setForeground(colorTinta);
+        area.setFont(fuente);
+        area.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        area.setCaretPosition(0);
+
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.setBorder(null);
+        scroll.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        return scroll;
+    }
+    // ===== FIN CAMBIO DIARIO =====
 
     // BOTÓN PARA VOLVER A LA PANTALLA DE INICIO
 
