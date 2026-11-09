@@ -29,6 +29,13 @@ public class Juego {
             }
         }
     }
+    
+    /** El jugador decide terminar su partida. */
+public void rendirse() {
+    salud = 0;
+    vivo = false;
+    diario.add("Día " + dias + ": Decidiste poner fin a tu travesía.");
+}
 
     /**
      * Detecta los efectos escritos en el texto de cada opción, por ejemplo
@@ -249,7 +256,9 @@ public class Juego {
     // =========================================================================
 
     private void eventoAsimetricoPorRol(Accion accion) {
-        int probabilidad = Math.min(95, 50 + dias * 2);
+        // Los eventos tácticos aparecen con mayor frecuencia y aumentan con los días.
+        // En el día 1 hay un 73% de probabilidad; nunca supera el 95%.
+        int probabilidad = Math.min(95, 70 + dias * 3);
         if (random.nextInt(100) >= probabilidad) {
             return;
         }
@@ -652,10 +661,10 @@ public class Juego {
         return decision;
     }
 
-    // =========================================================================
+    
     // RESOLUCIÓN DE DECISIONES: aplica los efectos de la opción elegida
     // (los efectos escritos en el texto, o un giro inventado si no tiene ninguno)
-    // =========================================================================
+    
 
     public String resolverDecision(int opcionElegida) {
         log = new StringBuilder();
@@ -764,7 +773,9 @@ public class Juego {
      * El daño crece con los días y la defensa lo reduce. Nunca se avisa de antemano.
      */
     private Giro inventarGiro(boolean prudente) {
-        boolean bueno = random.nextInt(100) < (prudente ? 55 : 50);
+        // Ahora hay un 35% de posibilidades de obtener un resultado positivo.
+        // Las opciones negativas provocan daño con mucha más frecuencia.
+        boolean bueno = random.nextInt(100) < 35;
         Giro g;
 
         if (prudente && bueno) {
@@ -776,21 +787,30 @@ public class Juego {
                 default: g = new Giro("Aprovechas la calma para recuperar el aliento."); g.salud = 5; break;
             }
         } else if (prudente) {
-            switch (random.nextInt(4)) {
+            // En las opciones prudentes, 4 de cada 5 resultados negativos
+            // causan daño. El quinto hace perder provisiones o puntos.
+            switch (random.nextInt(5)) {
                 case 0:
                     g = new Giro("Un ruido te sobresalta y tropiezas al retirarte.");
-                    g.salud = -danio(5); break;
+                    g.salud = -danio(8); break;
                 case 1:
-                    if (provisiones > 0) { g = new Giro("Una rata se cuela en tu mochila y se lleva comida."); g.prov = -1; }
-                    else { g = new Giro("Una rata te muerde la mano mientras te alejas."); g.salud = -danio(5); }
-                    break;
-                case 2:
-                    if (municion > 0) { g = new Giro("Se te cae un cargador por el camino y no lo recuperas."); g.mun = -1; }
-                    else { g = new Giro("Pisas mal y te torcés el tobillo."); g.salud = -danio(5); }
-                    break;
-                default:
-                    g = new Giro("Una rama oculta te corta el brazo.");
+                    g = new Giro("Una rata te muerde la mano mientras te alejas.");
                     g.salud = -danio(5); break;
+                case 2:
+                    g = new Giro("Pisas mal entre los escombros y te torcés el tobillo.");
+                    g.salud = -danio(10); break;
+                case 3:
+                    g = new Giro("Una rama oculta te corta el brazo al retirarte.");
+                    g.salud = -danio(8); break;
+                default:
+                    if (provisiones > 0) {
+                        g = new Giro("En el camino pierdes parte de tus provisiones.");
+                        g.prov = -1;
+                    } else {
+                        g = new Giro("El contratiempo te hace perder tiempo valioso.");
+                        g.pts = -5;
+                    }
+                    break;
             }
         } else if (bueno) {
             switch (random.nextInt(5)) {
@@ -801,17 +821,26 @@ public class Juego {
                 default: g = new Giro("Todo sale mejor de lo esperado."); g.pts = 15; break;
             }
         } else {
-            switch (random.nextInt(4)) {
+            // En las opciones audaces, 4 de cada 5 resultados negativos
+            // causan daño, y los golpes son más fuertes.
+            switch (random.nextInt(5)) {
                 case 0:
                     g = new Giro("Sales mal parado: algo te golpea en la oscuridad.");
-                    g.salud = -danio(10); break;
+                    g.salud = -danio(15); break;
                 case 1:
                     g = new Giro("Un infectado te sorprende y debes huir herido.");
-                    g.salud = -danio(10); break;
+                    g.salud = -danio(12); break;
                 case 2:
+                    g = new Giro("Enfrentas un obstáculo y recibes un golpe fuerte.");
+                    g.salud = -danio(18); break;
+                case 3:
+                    g = new Giro("El intento sale mal y terminas lastimado durante la huida.");
+                    g.salud = -danio(10); break;
+                default:
                     if (provisiones > 0 && municion > 0) {
                         g = new Giro("En la huida pierdes parte de tu equipo.");
-                        g.prov = -1; g.mun = -1;
+                        g.prov = -1;
+                        g.mun = -1;
                     } else if (provisiones > 0) {
                         g = new Giro("En la huida se te cae la mochila y pierdes comida.");
                         g.prov = -1;
@@ -820,12 +849,9 @@ public class Juego {
                         g.mun = -1;
                     } else {
                         g = new Giro("En la huida te llevas un golpe fuerte.");
-                        g.salud = -danio(5);
+                        g.salud = -danio(10);
                     }
                     break;
-                default:
-                    g = new Giro("El intento fracasa y pierdes tiempo valioso.");
-                    g.pts = -10; break;
             }
         }
         return g;

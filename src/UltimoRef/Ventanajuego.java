@@ -24,11 +24,11 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-// ===== [CAMBIO SUPABASE 1] Imports nuevos para el guardado en segundo plano =====
+// SUPABASE  Imports nuevos para el guardado en segundo plano 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.swing.SwingUtilities;
-// ===== FIN CAMBIO 1 =====
+// FIN 
 
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -52,7 +52,7 @@ public class Ventanajuego extends JFrame {
     private Juego juego;
     private int mejorPuntuacion = 0;
 
-    // ===== [CAMBIO SUPABASE 2] =====
+    // SUPABASE 
     // Cola de guardado en un solo hilo: los guardados se hacen en orden
     // y nunca congelan la interfaz.
     private final ExecutorService guardador = Executors.newSingleThreadExecutor(r -> {
@@ -60,7 +60,7 @@ public class Ventanajuego extends JFrame {
         t.setDaemon(true);
         return t;
     });
-    // ===== FIN CAMBIO 2 =====
+    // FIN
 
     // SONIDO AMBIENTAL DEL JUEGO
 
@@ -110,7 +110,7 @@ public class Ventanajuego extends JFrame {
 
     // CONSTRUCTOR DE LA VENTANA PRINCIPAL
     // Construye toda la interfaz SIN mostrarla. La ventana se muestra
-    // desde iniciarDesde(...), cuando ya está todo listo.
+ 
 
     public Ventanajuego() {
         setTitle("ÚLTIMO REFUGIO - SUPERVIVENCIA");
@@ -121,7 +121,7 @@ public class Ventanajuego extends JFrame {
         // Se cargan y escalan las imágenes pesadas una sola vez.
         precargarImagenes();
 
-        // PANEL SUPERIOR (HUD TÁCTICO CON ICONOS)
+        // PANEL SUPERIOR 
 
         JPanel top = new JPanel(new GridLayout(2, 1, 0, 6));
         top.setBackground(COLOR_HUD_FONDO);
@@ -130,7 +130,7 @@ public class Ventanajuego extends JFrame {
             BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
 
-        // Fila 1 del HUD
+        // Fila 1 
         JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 25, 0));
         fila1.setOpaque(false);
 
@@ -153,7 +153,7 @@ public class Ventanajuego extends JFrame {
         fila1.add(crearSeparadorVertical());
         fila1.add(lblPunt);
 
-        // Fila 2 del HUD: inventario y botón para volver al menú
+        // inventario y botón para volver al menú
         JPanel fila2 = new JPanel(new BorderLayout(15, 0));
         fila2.setOpaque(false);
 
@@ -167,9 +167,53 @@ public class Ventanajuego extends JFrame {
         panelInventario.add(crearSeparadorVertical());
         panelInventario.add(lblDef);
 
-        JPanel panelBotonInicioSuperior = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        //   CALAVERA 
+        // Botón de la calavera (imagen calavera.png) junto a "VOLVER AL INICIO".
+        final int TAM_CALAVERA = 35; 
+
+        final ImageIcon iconoCalavera = cargarIcono("/UltimoRef/img/calavera.png", TAM_CALAVERA, TAM_CALAVERA);
+        final ImageIcon iconoCalaveraHover = crearIconoBrillante(iconoCalavera);
+
+        final JButton btnCalavera = new JButton();
+
+        if (iconoCalavera != null) {
+            btnCalavera.setIcon(iconoCalavera);
+        } else {
+            System.out.println("No se encontró /UltimoRef/img/calavera.png");
+            btnCalavera.setPreferredSize(new Dimension(TAM_CALAVERA, TAM_CALAVERA));
+        }
+
+        btnCalavera.setBorderPainted(false);
+        btnCalavera.setContentAreaFilled(false);
+        btnCalavera.setFocusPainted(false);
+        btnCalavera.setOpaque(false);
+        btnCalavera.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        btnCalavera.setToolTipText("Rendirse y terminar la partida");
+        btnCalavera.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        btnCalavera.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (iconoCalaveraHover != null) {
+                    btnCalavera.setIcon(iconoCalaveraHover);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (iconoCalavera != null) {
+                    btnCalavera.setIcon(iconoCalavera);
+                }
+            }
+        });
+
+        btnCalavera.addActionListener(e -> rendirse());
+
+        JPanel panelBotonInicioSuperior = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         panelBotonInicioSuperior.setOpaque(false);
+        panelBotonInicioSuperior.add(btnCalavera);
         panelBotonInicioSuperior.add(crearBotonInicio());
+        //CALAVERA 
 
         fila2.add(panelInventario, BorderLayout.CENTER);
         fila2.add(panelBotonInicioSuperior, BorderLayout.EAST);
@@ -286,16 +330,8 @@ public class Ventanajuego extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    // =========================================================================
+ 
     // ARRANQUE SIN HUECOS ENTRE PANTALLAS
-    // =========================================================================
-
-    /**
-     * Muestra la selección de rol encima del menú (que sigue visible debajo),
-     * y cuando el jugador elige, abre la ventana del juego.
-     * Devuelve true si se inició la partida, false si el jugador volvió al menú.
-     * El menú debe cerrarlo quien lo llama cuando esto devuelve true.
-     */
     public boolean iniciarDesde(JFrame menu) {
 
         int r = elegirRol(menu);
@@ -313,13 +349,10 @@ public class Ventanajuego extends JFrame {
         return true;
     }
 
-    // ===== [CAMBIO SUPABASE 3] =====
+    // SUPABASE
     // MÉTODOS NUEVOS: CONTINUAR UNA PARTIDA GUARDADA Y GUARDAR EN LA NUBE
 
-    /**
-     * Abre el juego directamente en una partida guardada (botón CONTINUAR).
-     * Se saltea la selección de rol: el rol viene dentro de la partida.
-     */
+   
     public boolean continuarDesde(JFrame menu, Juego guardado) {
 
         restaurarPartida(guardado);
@@ -379,7 +412,7 @@ public class Ventanajuego extends JFrame {
             }
         });
     }
-    // ===== FIN CAMBIO 3 =====
+    // FIN 
 
     // IMÁGENES: se leen y escalan UNA vez
 
@@ -461,7 +494,7 @@ public class Ventanajuego extends JFrame {
 
     // BOTÓN CON IMAGEN DEL LIBRO: ABRIR EL DIARIO DE SUPERVIVENCIA
 
-       private JButton crearBotonDiario() {
+    private JButton crearBotonDiario() {
 
         JButton btnDiario = new JButton();
 
@@ -511,6 +544,81 @@ public class Ventanajuego extends JFrame {
         return btnDiario;
     }
 
+    // CALAVERA 
+    // BOTÓN CALAVERA: el jugador termina su partida y pasa directo al resumen
+
+    private JButton crearBotonCalavera() {
+
+        JButton btnCalavera = new JButton();
+
+        final ImageIcon icono = cargarIcono("/UltimoRef/img/calavera.png", 48, 48);
+        final ImageIcon iconoHover = crearIconoBrillante(icono);
+
+        if (icono != null) {
+            btnCalavera.setIcon(icono);
+        } else {
+            // Respaldo si no se encuentra calavera.png
+            btnCalavera.setText("☠");
+            btnCalavera.setForeground(new Color(230, 80, 80));
+            btnCalavera.setFont(new Font("SansSerif", Font.BOLD, 24));
+        }
+
+        btnCalavera.setBorderPainted(false);
+        btnCalavera.setContentAreaFilled(false);
+        btnCalavera.setFocusPainted(false);
+        btnCalavera.setOpaque(false);
+        btnCalavera.setToolTipText("Rendirse y terminar la partida");
+        btnCalavera.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+
+        // Efecto al pasar el mouse por encima
+        btnCalavera.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (iconoHover != null) {
+                    btnCalavera.setIcon(iconoHover);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (icono != null) {
+                    btnCalavera.setIcon(icono);
+                }
+            }
+        });
+
+        btnCalavera.addActionListener(e -> rendirse());
+
+        return btnCalavera;
+    }
+
+    /** Termina la partida a pedido del jugador y muestra el resumen final. */
+    private void rendirse() {
+
+        if (juego == null || !juego.isVivo()) {
+            return;
+        }
+
+        int opcion = javax.swing.JOptionPane.showConfirmDialog(
+            this,
+            "¿Seguro que querés rendirte?\n"
+            + "Tu personaje morirá y pasarás al resumen de la partida.",
+            "TERMINAR PARTIDA",
+            javax.swing.JOptionPane.YES_NO_OPTION,
+            javax.swing.JOptionPane.WARNING_MESSAGE
+        );
+
+        if (opcion != javax.swing.JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        juego.rendirse();   // marca al personaje como muerto (método nuevo en Juego)
+        actualizar();
+        guardarEnNube();    // se guarda con vivo=false, igual que una muerte normal
+        mostrarFin();       // resumen + ranking + jugar de nuevo / salir
+    }
+    // CALAVERA 2
+
     /** Crea una copia del ícono con un resplandor dorado y más luminosa. */
     private ImageIcon crearIconoBrillante(ImageIcon original) {
 
@@ -545,14 +653,13 @@ public class Ventanajuego extends JFrame {
         return new ImageIcon(salida);
     }
 
-    // =========================================================================
-    // [CAMBIO DIARIO] VENTANA DEL DIARIO: LIBRO ABIERTO (libro.png) CON EL TEXTO
+   
+    // VENTANA DEL DIARIO: LIBRO ABIERTO (libro.png) CON EL TEXTO
     // ADENTRO DE LAS HOJAS. Página izquierda y derecha, con scroll si hace falta.
-    // =========================================================================
 
     private void mostrarDiario() {
 
-        // --- Cargar la imagen del libro y calcular su tamaño en pantalla ---
+        // Cargar la imagen del libro y calcular su tamaño en pantalla 
         BufferedImage libroOriginal = null;
         try {
             URL urlLibro = getClass().getResource("/UltimoRef/img/libro.png");
@@ -582,7 +689,7 @@ public class Ventanajuego extends JFrame {
         final int anchoFinal = anchoLibro;
         final int altoFinal = altoLibro;
 
-        // --- Diálogo sin bordes y transparente: se ve solo el libro ---
+        // Diálogo sin bordes y transparente: se ve solo el libro 
         JDialog dialogDiario = new JDialog(this, "DIARIO DE SUPERVIVENCIA", true);
         dialogDiario.setUndecorated(true);
         dialogDiario.setBackground(new Color(0, 0, 0, 0));
@@ -608,7 +715,7 @@ public class Ventanajuego extends JFrame {
         panelLibro.setOpaque(false);
         panelLibro.setPreferredSize(new Dimension(anchoFinal, altoFinal));
 
-        // --- Contenido del diario, repartido en dos hojas ---
+        // Contenido del diario, repartido en dos hojas 
         StringBuilder izquierda = new StringBuilder();
         StringBuilder derecha = new StringBuilder();
 
@@ -651,7 +758,7 @@ public class Ventanajuego extends JFrame {
         panelLibro.add(hojaIzq);
         panelLibro.add(hojaDer);
 
-        // --- Botón de cerrar (debajo del libro) ---
+        // Botón de cerrar (debajo del libro) 
         JButton btnCerrar = new JButton("CERRAR DIARIO");
         btnCerrar.setFont(new Font("SansSerif", Font.BOLD, 12));
         btnCerrar.setBackground(new Color(75, 55, 35));
@@ -725,10 +832,8 @@ public class Ventanajuego extends JFrame {
 
         btnInicio.addActionListener(e -> {
 
-            // ===== [CAMBIO SUPABASE 4] =====
-            // Antes decía "Perderás el progreso de la partida actual."
-            // Ahora el progreso se guarda, así que se cambia el mensaje
-            // y se guarda la partida antes de volver al menú.
+            // SUPABASE
+  
             int opcion = javax.swing.JOptionPane.showConfirmDialog(
                 this,
                 "¿Querés volver al menú principal?\n"
@@ -749,10 +854,8 @@ public class Ventanajuego extends JFrame {
                 } catch (Exception ex) {
                     System.out.println("Error al guardar: " + ex.getMessage());
                 }
-            // ===== FIN CAMBIO 4 =====
+            // FIN 
 
-                // Primero se abre el menú y recién después se cierra el juego,
-                // así nunca queda el escritorio a la vista.
                 new Pantallainicio();
                 dispose();
             }
@@ -801,9 +904,9 @@ public class Ventanajuego extends JFrame {
         return separador;
     }
 
-    // =========================================================================
+    
     // SELECCIÓN DE ROL
-    // =========================================================================
+  
 
     /**
      * Muestra el diálogo de selección de rol (sin bordes, a pantalla completa)
@@ -872,7 +975,7 @@ public class Ventanajuego extends JFrame {
 
         panelMedico.add(lblMedicoDesc, BorderLayout.CENTER);
 
-              JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
+        JButton btnMedico = new JButton("SELECCIONAR MÉDICO");
         btnMedico.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnMedico.setBackground(new Color(25, 70, 120));
         btnMedico.setForeground(Color.WHITE);
@@ -902,7 +1005,7 @@ public class Ventanajuego extends JFrame {
             seleccionRol[0] = 0;
             dialogRol.dispose();
         });
-        
+
         panelMedico.add(btnMedico, BorderLayout.SOUTH);
 
         // TARJETA 2: SOBREVIVIENTE
@@ -933,7 +1036,7 @@ public class Ventanajuego extends JFrame {
 
         panelSobreviviente.add(lblSobrevivienteDesc, BorderLayout.CENTER);
 
-               JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
+        JButton btnSobreviviente = new JButton("SELECCIONAR SOBREVIVIENTE");
         btnSobreviviente.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSobreviviente.setBackground(new Color(160, 60, 20));
         btnSobreviviente.setForeground(Color.WHITE);
@@ -1037,10 +1140,10 @@ public class Ventanajuego extends JFrame {
 
         actualizar();
 
-        // ===== [CAMBIO SUPABASE 5] =====
+        // SUPABASE=
         // La partida nueva se guarda desde el día 1 (reemplaza la anterior, si había).
         guardarEnNube();
-        // ===== FIN CAMBIO 5 =====
+        // FIN 
     }
 
     /** Nueva partida desde dentro del juego (botón "JUGAR DE NUEVO"). */
@@ -1122,12 +1225,12 @@ public class Ventanajuego extends JFrame {
 
         actualizar();
 
-        // ===== [CAMBIO SUPABASE 6] =====
+        // SUPABASE 
         // Se guarda el progreso al cerrar cada día.
         // Si el personaje murió, se guarda con vivo=false:
         // CONTINUAR queda deshabilitado y la partida terminada no se retoma.
         guardarEnNube();
-        // ===== FIN CAMBIO 6 =====
+        // FIN 
 
         if (!juego.isVivo()) {
             mostrarFin();
@@ -1310,7 +1413,7 @@ public class Ventanajuego extends JFrame {
 
         mejorPuntuacion = Math.max(mejorPuntuacion, juego.getPuntuacion());
 
-        // ===== [CAMBIO RANKING 2] =====
+        // [CAMBIO RANKING 2] 
         // Registra el puntaje en el ranking (solo si supera su récord anterior).
         // Se hace en segundo plano para no trabar la pantalla final.
         final Juego terminada = juego;
@@ -1321,7 +1424,7 @@ public class Ventanajuego extends JFrame {
                 System.out.println("Error al guardar ranking: " + ex.getMessage());
             }
         });
-        // ===== FIN CAMBIO RANKING 2 =====
+        // FIN CAMBIO RANKING 2 
 
         StringBuilder sb = new StringBuilder();
 
@@ -1437,7 +1540,7 @@ public class Ventanajuego extends JFrame {
             dialogFin.dispose();
         });
 
-        // ===== [CAMBIO RANKING 3] =====
+        // [CAMBIO RANKING 3] 
         // Botón nuevo en la pantalla final: abre el top 10.
         JButton btnRankingFin = new JButton("VER RANKING");
         btnRankingFin.setFont(new Font("SansSerif", Font.BOLD, 14));
@@ -1446,7 +1549,7 @@ public class Ventanajuego extends JFrame {
         btnRankingFin.setPreferredSize(new Dimension(220, 45));
         btnRankingFin.setFocusPainted(false);
         btnRankingFin.addActionListener(e -> new PantallaRanking(dialogFin));
-        // ===== FIN CAMBIO RANKING 3 =====
+        //  FIN CAMBIO RANKING 3
 
         panelBotonesFin.add(btnReiniciar);
         panelBotonesFin.add(btnRankingFin);   // <-- nuevo
