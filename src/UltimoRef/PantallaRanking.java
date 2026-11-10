@@ -1,8 +1,8 @@
 package UltimoRef;
 
-import java.awt.*;
+import java.awt.*; //trae lo básico de dibujar, colores, fuentes, dimensiones, y layout
 import java.util.List;
-import javax.swing.*;
+import javax.swing.*; //trae los componentes que se ven en pantalla, panels, labels, buttons, etc.
 
 /**
  * Ventana con el top 10 de jugadores, con dos rankings: por puntaje y por días.

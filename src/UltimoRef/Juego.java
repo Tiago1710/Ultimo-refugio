@@ -1,8 +1,8 @@
 package UltimoRef;
 
-import java.util.ArrayList;
+import java.util.ArrayList; //se usa para crear el diario en lista.
 import java.util.List;
-import java.util.Random;
+import java.util.Random; //Genera los números aleatorios. Se usa para decidir si sale un evento y si sale o no.
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
