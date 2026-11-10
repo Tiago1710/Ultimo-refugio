@@ -158,8 +158,8 @@ public class PantallaRanking extends JDialog {
                 Color color = (i == 0) ? ORO : (i == 1) ? PLATA : (i == 2) ? BRONCE : TEXTO;
                 if (esYo) color = new Color(130, 220, 140);
 
-                panelFilas.add(crearFila(String.valueOf(i + 1),
-                        esYo ? f[0] + " (vos)" : f[0], f[1], f[2], f[3], color, false, colActiva));
+                panelFilas.add(crearFila(esYo ? "►" : String.valueOf(i + 1),
+        f[0], f[1], f[2], f[3], color, false, colActiva));
             } else {
                 panelFilas.add(crearFila(String.valueOf(i + 1), "—", "", "", "",
                         new Color(90, 100, 90), false, colActiva));
@@ -173,28 +173,34 @@ public class PantallaRanking extends JDialog {
     }
 
     private JPanel crearFila(String pos, String jugador, String rol, String dias,
-                             String puntos, Color color, boolean encabezado, int colActiva) {
+                         String puntos, Color color, boolean encabezado, int colActiva) {
 
-        JPanel fila = new JPanel(new GridBagLayout());
-        fila.setBackground(encabezado ? new Color(20, 32, 22) : new Color(18, 24, 18));
-        fila.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+    JPanel fila = new JPanel(new GridBagLayout());
+    fila.setBackground(encabezado ? new Color(20, 32, 22) : new Color(18, 24, 18));
+    fila.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
 
-        double[] pesos = {0.08, 0.38, 0.22, 0.12, 0.20};
-        String[] textos = {pos, jugador, rol, dias, puntos};
+    // Anchos fijos en píxeles: todas las filas quedan alineadas igual
+    int[] anchos = {40, 190, 130, 60, 90};
+    String[] textos = {pos, jugador, rol, dias, puntos};
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 0;
 
-        for (int i = 0; i < textos.length; i++) {
-            JLabel l = new JLabel(textos[i]);
-            // En el encabezado, la columna por la que se ordena se marca en dorado
-            l.setForeground(encabezado && i == colActiva ? ORO : color);
-            l.setFont(new Font("SansSerif", Font.BOLD, encabezado ? 12 : 14));
-            if (i >= 3) l.setHorizontalAlignment(JLabel.RIGHT);
-            gbc.gridx = i;
-            gbc.weightx = pesos[i];
-            fila.add(l, gbc);
-        }
-        return fila;
+    for (int i = 0; i < textos.length; i++) {
+        JLabel l = new JLabel(textos[i]);
+        l.setForeground(encabezado && i == colActiva ? ORO : color);
+        l.setFont(new Font("SansSerif", Font.BOLD, encabezado ? 12 : 14));
+        if (i >= 3) l.setHorizontalAlignment(JLabel.RIGHT);
+
+        Dimension d = new Dimension(anchos[i], l.getPreferredSize().height);
+        l.setPreferredSize(d);
+        l.setMinimumSize(d);
+        l.setMaximumSize(d);
+
+        gbc.gridx = i;
+        fila.add(l, gbc);
     }
+    return fila;
+}
 }
